@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:fit_track_app/data/core/configs/theme/assets/app_vectors.dart';
 import 'package:fit_track_app/data/core/configs/theme/assets/app_images.dart';
+import 'package:fit_track_app/presentation/auth/pages/signup.dart';
 
 class LoginPage extends StatelessWidget {
-  const LoginPage({super.key});
+  LoginPage({super.key});
+
+  final TextEditingController _Email = TextEditingController();
+  final TextEditingController _Password = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -14,7 +19,9 @@ class LoginPage extends StatelessWidget {
       borderSide: BorderSide.none,
     );
 
-    final hintStyle = TextStyle(color: Colors.grey[700]);
+    final hintStyle = TextStyle(
+      color: const Color.fromARGB(255, 180, 180, 180),
+    );
 
     return Scaffold(
       body: Stack(
@@ -73,6 +80,7 @@ class LoginPage extends StatelessWidget {
 
                       // Email
                       TextFormField(
+                        controller: _Email,
                         decoration: InputDecoration(
                           filled: true,
                           fillColor: Colors.white,
@@ -89,6 +97,7 @@ class LoginPage extends StatelessWidget {
 
                       // Palavra-passe
                       TextFormField(
+                        controller: _Password,
                         obscureText: true,
                         decoration: InputDecoration(
                           filled: true,
@@ -108,8 +117,54 @@ class LoginPage extends StatelessWidget {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: () {
-                            // Ação de login
+                          onPressed: () async {
+                            final email = _Email.text.trim();
+                            final password = _Password.text;
+
+                            try {
+                              await FirebaseAuth.instance
+                                  .signInWithEmailAndPassword(
+                                    email: email,
+                                    password: password,
+                                  );
+
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: const Text(
+                                    'Login efetuado com sucesso!',
+                                  ),
+                                  backgroundColor: Colors.grey[800],
+                                ),
+                              );
+
+                              // Aqui podes redirecionar para a home, dashboard, etc.
+                              // Navigator.of(context).pushReplacement(...);
+                            } on FirebaseAuthException catch (e) {
+                              String errorMessage;
+
+                              switch (e.code) {
+                                case 'user-not-found':
+                                  errorMessage =
+                                      'Nenhuma conta encontrada com esse email.';
+                                  break;
+                                case 'wrong-password':
+                                  errorMessage = 'Palavra-passe incorreta.';
+                                  break;
+                                case 'invalid-email':
+                                  errorMessage = 'Email inválido.';
+                                  break;
+                                default:
+                                  errorMessage =
+                                      'Erro ao fazer login. Tenta novamente.';
+                              }
+
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(errorMessage),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white,
@@ -140,9 +195,9 @@ class LoginPage extends StatelessWidget {
                           ),
                           GestureDetector(
                             onTap: () {
-                              Navigator.pop(
-                                context,
-                              ); // ou push para SignupPage()
+                              Navigator.of(context).push(
+                                MaterialPageRoute(builder: (_) => SignupPage()),
+                              );
                             },
                             child: const Text(
                               'Regista-te',

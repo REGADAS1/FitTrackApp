@@ -58,7 +58,7 @@ class SignUpOrSignInPage extends StatelessWidget {
                               animation,
                               secondaryAnimation,
                             ) {
-                              return const LoginPage(); // <-- aqui vai para a LoginPage real
+                              return LoginPage(); // <-- aqui vai para a LoginPage real
                             },
                             transitionsBuilder: (
                               context,

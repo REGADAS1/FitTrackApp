@@ -238,7 +238,7 @@ class SignupPage extends StatelessWidget {
                                 Future.delayed(const Duration(seconds: 1), () {
                                   Navigator.of(context).pushReplacement(
                                     MaterialPageRoute(
-                                      builder: (_) => const LoginPage(),
+                                      builder: (_) => LoginPage(),
                                     ),
                                   );
                                 });
@@ -281,7 +281,7 @@ class SignupPage extends StatelessWidget {
                                         context,
                                         animation,
                                         secondaryAnimation,
-                                      ) => const LoginPage(),
+                                      ) => LoginPage(),
                                   transitionsBuilder: (
                                     context,
                                     animation,
