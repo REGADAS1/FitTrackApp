@@ -6,6 +6,7 @@ class CreateUserReq {
   double? weight; // peso (em kg)
   double? height; // altura (em cm)
   String? goal; // exemplo: "emagrecer", "ganhar massa"
+  String? profilePictureUrl; // 👉 nova propriedade
 
   CreateUserReq({
     required this.name,
@@ -15,5 +16,6 @@ class CreateUserReq {
     this.weight,
     this.height,
     this.goal,
+    this.profilePictureUrl, // adicionada aqui
   });
 }

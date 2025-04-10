@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fit_track_app/data/models/auth/create_user_req.dart';
 import 'package:fit_track_app/data/core/configs/theme/assets/app_images.dart';
 import 'package:fit_track_app/presentation/auth/pages/select_height.dart';
+import 'package:fit_track_app/presentation/auth/pages/select_profile_picture.dart'; // ✅ IMPORTANTE
 
 class SelectGoalPage extends StatefulWidget {
   final CreateUserReq createUserReq;
@@ -167,9 +168,14 @@ class _SelectGoalPageState extends State<SelectGoalPage> {
                                       'goal': _selectedGoal,
                                     }, SetOptions(merge: true));
 
-                                Navigator.pushReplacementNamed(
+                                Navigator.pushReplacement(
                                   context,
-                                  '/dashboard',
+                                  MaterialPageRoute(
+                                    builder:
+                                        (_) => SelectProfilePicturePage(
+                                          createUserReq: widget.createUserReq,
+                                        ),
+                                  ),
                                 );
                               }
                             },
@@ -197,7 +203,15 @@ class _SelectGoalPageState extends State<SelectGoalPage> {
               // Agora não
               GestureDetector(
                 onTap: () {
-                  Navigator.pushReplacementNamed(context, '/dashboard');
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder:
+                          (_) => SelectProfilePicturePage(
+                            createUserReq: widget.createUserReq,
+                          ),
+                    ),
+                  );
                 },
                 child: const Text(
                   'Agora Não',

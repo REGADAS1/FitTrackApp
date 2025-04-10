@@ -44,6 +44,8 @@ dependencies:
   get_it: 
   dartz:
   cloud_firestore:
+  http:
+  image_picker:
 
 dev_dependencies:
   flutter_test:
