@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'package:fit_track_app/data/models/auth/create_user_req.dart';
+import 'package:fit_track_app/presentation/auth/pages/select_weight.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -19,8 +22,8 @@ class LoginPage extends StatelessWidget {
       borderSide: BorderSide.none,
     );
 
-    final hintStyle = TextStyle(
-      color: const Color.fromARGB(255, 180, 180, 180),
+    final hintStyle = const TextStyle(
+      color: Color.fromARGB(255, 180, 180, 180),
     );
 
     return Scaffold(
@@ -134,11 +137,33 @@ class LoginPage extends StatelessWidget {
                                     'Login efetuado com sucesso!',
                                   ),
                                   backgroundColor: Colors.grey[800],
+                                  duration: const Duration(milliseconds: 1300),
                                 ),
                               );
 
-                              // Aqui podes redirecionar para a home, dashboard, etc.
-                              // Navigator.of(context).pushReplacement(...);
+                              // Aguarda 1.5s
+                              await Future.delayed(
+                                const Duration(milliseconds: 1500),
+                              );
+
+                              // Cria o CreateUserReq (vazio por agora)
+                              final createUserReq = CreateUserReq(
+                                name: '',
+                                lastname: '',
+                                email: email,
+                                password: password,
+                              );
+
+                              // Vai para a página do peso
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (_) => SelectWeightPage(
+                                        createUserReq: createUserReq,
+                                      ),
+                                ),
+                              );
                             } on FirebaseAuthException catch (e) {
                               String errorMessage;
 
