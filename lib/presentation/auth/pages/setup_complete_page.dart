@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fit_track_app/data/core/configs/theme/assets/app_images.dart';
 import 'package:fit_track_app/data/models/auth/create_user_req.dart';
 import 'package:fit_track_app/presentation/auth/pages/select_profile_picture.dart';
+import 'package:fit_track_app/presentation/menus/dashboard_page.dart';
 
 class SetupCompletePage extends StatelessWidget {
   final CreateUserReq createUserReq;
@@ -90,7 +91,12 @@ class SetupCompletePage extends StatelessWidget {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
-                      Navigator.pushReplacementNamed(context, '/dashboard');
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const DashboardPage(),
+                        ),
+                      );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
