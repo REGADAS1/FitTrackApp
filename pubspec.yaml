@@ -48,6 +48,7 @@ dependencies:
   image_picker:
   fl_chart:
   intl:
+  image_picker_web:
 
 dev_dependencies:
   flutter_test:
