@@ -1,24 +1,77 @@
 import 'package:flutter/material.dart';
-import 'package:fit_track_app/data/models/auth/create_user_req.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
 import 'package:fit_track_app/data/core/configs/theme/assets/app_images.dart';
-import 'package:fit_track_app/presentation/auth/pages/select_height.dart';
+import 'package:fit_track_app/presentation/menus/dashboard_page.dart';
 
-class SelectWeightPage extends StatefulWidget {
-  final CreateUserReq createUserReq;
-
-  const SelectWeightPage({Key? key, required this.createUserReq})
-    : super(key: key);
+class RegisterDailyWeightPage extends StatefulWidget {
+  const RegisterDailyWeightPage({super.key});
 
   @override
-  _SelectWeightPageState createState() => _SelectWeightPageState();
+  State<RegisterDailyWeightPage> createState() =>
+      _RegisterDailyWeightPageState();
 }
 
-class _SelectWeightPageState extends State<SelectWeightPage> {
+class _RegisterDailyWeightPageState extends State<RegisterDailyWeightPage> {
   int _selectedKg = 70;
   int _selectedGrams = 0;
+
+  Future<void> _saveWeight() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final weight = double.parse('$_selectedKg.${_selectedGrams}');
+    final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+    final todayEnd = todayStart.add(const Duration(days: 1));
+
+    final userRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid);
+    final weightsRef = userRef.collection('weights');
+
+    final existing =
+        await weightsRef
+            .where(
+              'date',
+              isGreaterThanOrEqualTo: Timestamp.fromDate(todayStart),
+            )
+            .where('date', isLessThan: Timestamp.fromDate(todayEnd))
+            .get();
+
+    if (existing.docs.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Já registaste o peso hoje.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    await weightsRef.add({
+      'date': Timestamp.fromDate(todayStart),
+      'weight': weight,
+    });
+
+    await userRef.set({'weight': weight}, SetOptions(merge: true));
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Peso registado com sucesso!'),
+        backgroundColor: Colors.green[600],
+      ),
+    );
+
+    await Future.delayed(const Duration(milliseconds: 1000));
+
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const DashboardPage()),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,14 +87,36 @@ class _SelectWeightPageState extends State<SelectWeightPage> {
               ),
             ),
           ),
+
+          // SETA VOLTAR
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.only(left: 16, top: 12),
+              child: ClipOval(
+                child: Material(
+                  color: Colors.white.withOpacity(0.2),
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.pop(context);
+                    },
+                    splashColor: Colors.white30,
+                    child: const SizedBox(
+                      width: 40,
+                      height: 40,
+                      child: Icon(Icons.arrow_back, color: Colors.white),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+
           Column(
             children: [
-              const SizedBox(height: 80),
-
-              // Título
+              const SizedBox(height: 100),
               const Center(
                 child: Text(
-                  'Seleciona o teu peso',
+                  'Regista o teu peso de hoje',
                   style: TextStyle(
                     fontSize: 24,
                     color: Colors.white,
@@ -154,49 +229,13 @@ class _SelectWeightPageState extends State<SelectWeightPage> {
 
               const SizedBox(height: 30),
 
-              // BOTÃO "Continuar"
+              // BOTÃO "Guardar"
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () async {
-                      final weight = double.parse(
-                        '$_selectedKg.${_selectedGrams}',
-                      );
-
-                      widget.createUserReq.weight = weight;
-
-                      final user = FirebaseAuth.instance.currentUser;
-                      if (user != null) {
-                        final userRef = FirebaseFirestore.instance
-                            .collection('users')
-                            .doc(user.uid);
-
-                        // Atualiza o peso atual no documento principal
-                        await userRef.set({
-                          'weight': weight,
-                        }, SetOptions(merge: true));
-
-                        // Adiciona o peso à subcoleção 'weights' (para o gráfico)
-                        await userRef.collection('weights').add({
-                          'date': Timestamp.fromDate(DateTime.now()),
-                          'weight': weight,
-                        });
-                      }
-
-                      await Future.delayed(const Duration(milliseconds: 1500));
-
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder:
-                              (_) => SelectHeightPage(
-                                createUserReq: widget.createUserReq,
-                              ),
-                        ),
-                      );
-                    },
+                    onPressed: _saveWeight,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       foregroundColor: Colors.black,
@@ -206,38 +245,12 @@ class _SelectWeightPageState extends State<SelectWeightPage> {
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     child: const Text(
-                      'Continuar',
+                      'Guardar Peso',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
                     ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // AGORA NÃO
-              GestureDetector(
-                onTap: () async {
-                  await Future.delayed(const Duration(milliseconds: 150));
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder:
-                          (_) => SelectHeightPage(
-                            createUserReq: widget.createUserReq,
-                          ),
-                    ),
-                  );
-                },
-                child: const Text(
-                  'Agora Não',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 16,
-                    decoration: TextDecoration.underline,
                   ),
                 ),
               ),

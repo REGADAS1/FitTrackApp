@@ -1,13 +1,12 @@
 import 'dart:async';
-import 'package:fit_track_app/data/models/auth/create_user_req.dart';
-import 'package:fit_track_app/presentation/auth/pages/select_weight.dart';
+import 'package:fit_track_app/presentation/auth/pages/signup.dart';
+import 'package:fit_track_app/presentation/auth/pages/check_profile.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:fit_track_app/data/core/configs/theme/assets/app_vectors.dart';
 import 'package:fit_track_app/data/core/configs/theme/assets/app_images.dart';
-import 'package:fit_track_app/presentation/auth/pages/signup.dart';
 
 class LoginPage extends StatelessWidget {
   LoginPage({super.key});
@@ -141,27 +140,15 @@ class LoginPage extends StatelessWidget {
                                 ),
                               );
 
-                              // Aguarda 1.5s
                               await Future.delayed(
                                 const Duration(milliseconds: 1500),
                               );
 
-                              // Cria o CreateUserReq (vazio por agora)
-                              final createUserReq = CreateUserReq(
-                                name: '',
-                                lastname: '',
-                                email: email,
-                                password: password,
-                              );
-
-                              // Vai para a página do peso
+                              // Redireciona para verificação de perfil
                               Navigator.pushReplacement(
                                 context,
                                 MaterialPageRoute(
-                                  builder:
-                                      (_) => SelectWeightPage(
-                                        createUserReq: createUserReq,
-                                      ),
+                                  builder: (_) => const CheckProfilePage(),
                                 ),
                               );
                             } on FirebaseAuthException catch (e) {

@@ -1,6 +1,7 @@
 import 'package:fit_track_app/presentation/auth/pages/signup_or_signin.dart';
 import 'package:fit_track_app/presentation/menus/dashboard_page.dart';
 import 'package:fit_track_app/presentation/menus/edit_profile_page.dart';
+import 'package:fit_track_app/presentation/menus/daily_weight.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -59,6 +60,13 @@ class _UserProfilePageState extends State<UserProfilePage> {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => const EditProfilePage()),
+    );
+  }
+
+  void _registerWeight() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const RegisterDailyWeightPage()),
     );
   }
 
@@ -164,6 +172,29 @@ class _UserProfilePageState extends State<UserProfilePage> {
                       onPressed: _editProfile,
                       icon: const Icon(Icons.edit),
                       label: const Text('Editar Perfil'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // BOTÃO PESAR-ME
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _registerWeight,
+                      icon: const Icon(Icons.monitor_weight_outlined),
+                      label: const Text('Pesar-me'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
                         foregroundColor: Colors.black,

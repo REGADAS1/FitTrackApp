@@ -46,6 +46,8 @@ dependencies:
   cloud_firestore:
   http:
   image_picker:
+  fl_chart:
+  intl:
 
 dev_dependencies:
   flutter_test:

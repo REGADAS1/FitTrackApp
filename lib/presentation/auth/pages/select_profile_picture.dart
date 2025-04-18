@@ -9,7 +9,6 @@ import 'package:fit_track_app/data/models/auth/create_user_req.dart';
 import 'package:fit_track_app/data/core/configs/theme/assets/app_images.dart';
 import 'package:fit_track_app/data/sources/cloudinary_service.dart';
 import 'package:fit_track_app/presentation/auth/pages/setup_complete_page.dart';
-import 'package:fit_track_app/presentation/auth/pages/select_height.dart';
 
 class SelectProfilePicturePage extends StatefulWidget {
   final CreateUserReq createUserReq;
@@ -38,21 +37,33 @@ class _SelectProfilePicturePageState extends State<SelectProfilePicturePage> {
   Future<void> _uploadAndContinue() async {
     final user = FirebaseAuth.instance.currentUser;
 
-    if (_imageFile != null && user != null) {
+    if (_imageFile == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Por favor, selecione uma foto de perfil.'),
+          backgroundColor: Colors.red[600],
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    if (user != null) {
       final imageUrl = await CloudinaryService.uploadImage(_imageFile!);
       if (imageUrl != null) {
         await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
           'profilePictureUrl': imageUrl,
         }, SetOptions(merge: true));
       }
-    }
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => SetupCompletePage(createUserReq: widget.createUserReq),
-      ),
-    );
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder:
+              (_) => SetupCompletePage(createUserReq: widget.createUserReq),
+        ),
+      );
+    }
   }
 
   void _showPickerOptions() {
@@ -222,6 +233,31 @@ class _SelectProfilePicturePageState extends State<SelectProfilePicturePage> {
                         fontSize: 16,
                       ),
                     ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Agora não
+              GestureDetector(
+                onTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder:
+                          (_) => SetupCompletePage(
+                            createUserReq: widget.createUserReq,
+                          ),
+                    ),
+                  );
+                },
+                child: const Text(
+                  'Agora não',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 16,
+                    decoration: TextDecoration.underline,
                   ),
                 ),
               ),
