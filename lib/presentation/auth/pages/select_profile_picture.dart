@@ -49,7 +49,9 @@ class _SelectProfilePicturePageState extends State<SelectProfilePicturePage> {
     }
 
     if (user != null) {
-      final imageUrl = await CloudinaryService.uploadImage(_imageFile!);
+      final imageBytes = await _imageFile!.readAsBytes();
+      final imageUrl = await CloudinaryService.uploadBytes(imageBytes);
+
       if (imageUrl != null) {
         await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
           'profilePictureUrl': imageUrl,

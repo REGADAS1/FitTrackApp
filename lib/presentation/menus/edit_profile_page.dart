@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:fit_track_app/presentation/menus/user_profile_page.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -106,7 +107,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
       String? newImageUrl = _profileImageUrl;
 
       if (_newImageFile != null) {
-        final url = await CloudinaryService.uploadImage(_newImageFile!);
+        final bytes =
+            await _newImageFile!.readAsBytes(); // Convert File to Uint8List
+        final url = await CloudinaryService.uploadBytes(bytes);
         if (url != null) {
           newImageUrl = url;
         }
@@ -139,7 +142,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
               child: SingleChildScrollView(
                 child: Column(
                   children: [
-                    // FOTO + BOTÃO
                     GestureDetector(
                       onTap: _showPickerOptions,
                       child: Stack(
@@ -152,11 +154,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                 _newImageFile != null
                                     ? FileImage(_newImageFile!)
                                     : (_profileImageUrl != null
-                                            ? NetworkImage(_profileImageUrl!)
-                                            : const AssetImage(
+                                        ? NetworkImage(_profileImageUrl!)
+                                        : const AssetImage(
                                               'assets/images/default_avatar.png',
-                                            ))
-                                        as ImageProvider,
+                                            )
+                                            as ImageProvider),
                           ),
                           Container(
                             decoration: const BoxDecoration(
@@ -173,7 +175,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       ),
                     ),
                     const SizedBox(height: 30),
-
                     _buildInput("Nome", _nameController),
                     _buildInput("Apelido", _lastnameController),
                     _buildInput(
@@ -186,8 +187,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       _heightController,
                       keyboardType: TextInputType.number,
                     ),
-
-                    // Email (apenas leitura)
                     Container(
                       margin: const EdgeInsets.symmetric(vertical: 10),
                       padding: const EdgeInsets.symmetric(
@@ -204,9 +203,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         style: const TextStyle(color: Colors.white70),
                       ),
                     ),
-
                     const SizedBox(height: 30),
-
                     ElevatedButton(
                       onPressed: _saveChanges,
                       style: ElevatedButton.styleFrom(
@@ -229,8 +226,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 ),
               ),
             ),
-
-            // SETA VOLTAR
             Padding(
               padding: const EdgeInsets.only(left: 16, top: 12),
               child: ClipOval(

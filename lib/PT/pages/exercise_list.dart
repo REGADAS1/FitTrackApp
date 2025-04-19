@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker_web/image_picker_web.dart';
 
 import 'pt_dashboard.dart';
+import 'package:fit_track_app/data/sources/cloudinary_service.dart';
 
 class ExerciseListPage extends StatefulWidget {
   const ExerciseListPage({super.key});
@@ -13,10 +14,10 @@ class ExerciseListPage extends StatefulWidget {
 }
 
 class _ExerciseListPageState extends State<ExerciseListPage> {
-  String? _selectedGroupFilter;
   final TextEditingController _nameController = TextEditingController();
-  Uint8List? _imageData;
   String? _selectedGroup;
+  Uint8List? _imageData;
+  String? _selectedGroupFilter;
   bool _showForm = false;
 
   final List<String> muscleGroups = [
@@ -32,9 +33,7 @@ class _ExerciseListPageState extends State<ExerciseListPage> {
   Future<void> _pickImage() async {
     final picked = await ImagePickerWeb.getImageAsBytes();
     if (picked != null) {
-      setState(() {
-        _imageData = picked;
-      });
+      setState(() => _imageData = picked);
     }
   }
 
@@ -43,10 +42,13 @@ class _ExerciseListPageState extends State<ExerciseListPage> {
     if (name.isEmpty || _imageData == null || _selectedGroup == null) return;
 
     try {
+      final imageUrl = await CloudinaryService.uploadBytes(_imageData!);
+      if (imageUrl == null) throw 'Erro ao fazer upload da imagem.';
+
       await FirebaseFirestore.instance.collection('exercises').add({
         'name': name,
-        'image': _imageData,
         'muscleGroup': _selectedGroup,
+        'imageUrl': imageUrl,
         'createdAt': FieldValue.serverTimestamp(),
       });
 
@@ -66,7 +68,7 @@ class _ExerciseListPageState extends State<ExerciseListPage> {
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erro ao adicionar exercício: $e'),
+          content: Text('Erro ao guardar: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -80,62 +82,8 @@ class _ExerciseListPageState extends State<ExerciseListPage> {
         .orderBy('createdAt', descending: true);
 
     return Scaffold(
-      drawer: Drawer(
-        backgroundColor: const Color(0xFF1A1A1A),
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            const DrawerHeader(
-              decoration: BoxDecoration(color: Colors.blueAccent),
-              child: Text(
-                'Menu da PT',
-                style: TextStyle(color: Colors.white, fontSize: 24),
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.home, color: Colors.white),
-              title: const Text(
-                'Dashboard',
-                style: TextStyle(color: Colors.white),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const PTDashboardPage()),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.fitness_center, color: Colors.white),
-              title: const Text(
-                'Lista de Exercícios',
-                style: TextStyle(color: Colors.white),
-              ),
-              onTap: () => Navigator.pop(context),
-            ),
-          ],
-        ),
-      ),
       appBar: AppBar(
         title: const Text('Lista de Exercícios'),
-        leading: Builder(
-          builder:
-              (context) => Padding(
-                padding: const EdgeInsets.only(left: 12),
-                child: GestureDetector(
-                  onTap: () => Scaffold.of(context).openDrawer(),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white10,
-                      shape: BoxShape.circle,
-                    ),
-                    padding: const EdgeInsets.all(8),
-                    child: const Icon(Icons.menu, color: Colors.white),
-                  ),
-                ),
-              ),
-        ),
         actions: [
           DropdownButton<String>(
             value: _selectedGroupFilter,
@@ -157,90 +105,97 @@ class _ExerciseListPageState extends State<ExerciseListPage> {
           const SizedBox(width: 16),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: StreamBuilder(
-          stream: query.snapshots(),
-          builder: (context, snapshot) {
-            if (!snapshot.hasData)
-              return const Center(child: CircularProgressIndicator());
-
-            final exercises =
-                snapshot.data!.docs.where((doc) {
-                  if (_selectedGroupFilter == null) return true;
-                  return doc['muscleGroup'] == _selectedGroupFilter;
-                }).toList();
-
-            if (exercises.isEmpty) {
-              return const Center(
-                child: Text(
-                  'Nenhum exercício registado.',
-                  style: TextStyle(color: Colors.white70),
-                ),
-              );
-            }
-
-            return ListView.builder(
-              itemCount: exercises.length,
-              itemBuilder: (context, index) {
-                final data = exercises[index].data();
-                final name = data['name'] ?? 'Sem nome';
-                final group = data['muscleGroup'] ?? '---';
-                final imageBytes = data['image'];
-
-                return Card(
-                  color: const Color(0xFF2C2C2C),
-                  margin: const EdgeInsets.symmetric(vertical: 8),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: ListTile(
-                    leading:
-                        imageBytes != null
-                            ? ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.memory(
-                                Uint8List.fromList(List<int>.from(imageBytes)),
-                                width: 60,
-                                height: 60,
-                                fit: BoxFit.cover,
-                              ),
-                            )
-                            : const Icon(
-                              Icons.fitness_center,
-                              size: 40,
-                              color: Colors.white70,
-                            ),
-                    title: Text(
-                      name,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    subtitle: Text(
-                      group,
-                      style: const TextStyle(color: Colors.white70),
-                    ),
-                  ),
+      drawer: Drawer(
+        backgroundColor: const Color(0xFF1A1A1A),
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            const DrawerHeader(
+              decoration: BoxDecoration(color: Colors.blueAccent),
+              child: Text(
+                'Menu da PT',
+                style: TextStyle(color: Colors.white, fontSize: 24),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.home, color: Colors.white),
+              title: const Text(
+                'Dashboard',
+                style: TextStyle(color: Colors.white),
+              ),
+              onTap: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const PTDashboardPage()),
                 );
               },
-            );
-          },
+            ),
+            ListTile(
+              leading: const Icon(Icons.fitness_center, color: Colors.white),
+              title: const Text(
+                'Lista de Exercícios',
+                style: TextStyle(color: Colors.white),
+              ),
+              onTap: () {
+                Navigator.pop(context); // fecha o drawer
+                // já estás nesta página, mas se quiseres redirecionar de novo:
+                // Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ExerciseListPage()));
+              },
+            ),
+          ],
         ),
       ),
-      floatingActionButton: Stack(
+      body: Stack(
         children: [
-          Positioned(
-            right: 16,
-            bottom: 16,
-            child: FloatingActionButton(
-              backgroundColor: Colors.blueAccent,
-              child: const Icon(Icons.add),
-              onPressed: () {
-                setState(() {
-                  _showForm = true;
-                });
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: StreamBuilder(
+              stream: query.snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData)
+                  return const Center(child: CircularProgressIndicator());
+
+                final exercises =
+                    snapshot.data!.docs.where((doc) {
+                      if (_selectedGroupFilter == null) return true;
+                      return doc['muscleGroup'] == _selectedGroupFilter;
+                    }).toList();
+
+                return ListView.builder(
+                  itemCount: exercises.length,
+                  itemBuilder: (context, index) {
+                    final data = exercises[index].data();
+                    return Card(
+                      color: const Color(0xFF2C2C2C),
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: ListTile(
+                        leading: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            data['imageUrl'],
+                            width: 60,
+                            height: 60,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        title: Text(
+                          data['name'] ?? '',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        subtitle: Text(
+                          data['muscleGroup'] ?? '',
+                          style: const TextStyle(color: Colors.white70),
+                        ),
+                      ),
+                    );
+                  },
+                );
               },
             ),
           ),
@@ -259,8 +214,7 @@ class _ExerciseListPageState extends State<ExerciseListPage> {
                   color: Colors.black.withOpacity(0.5),
                   alignment: Alignment.center,
                   child: GestureDetector(
-                    onTap:
-                        () {}, // para não fechar ao clicar dentro do formulário
+                    onTap: () {},
                     child: Container(
                       padding: const EdgeInsets.all(24),
                       width: 400,
@@ -354,6 +308,11 @@ class _ExerciseListPageState extends State<ExerciseListPage> {
               ),
             ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Colors.blueAccent,
+        onPressed: () => setState(() => _showForm = true),
+        child: const Icon(Icons.add),
       ),
     );
   }
