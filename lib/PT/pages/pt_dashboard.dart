@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'exercise_list.dart';
 import 'assign_workout.dart';
+import 'view_workouts.dart';
 
 class PTDashboardPage extends StatefulWidget {
   const PTDashboardPage({super.key});
@@ -98,13 +99,14 @@ class _PTDashboardPageState extends State<PTDashboardPage> {
               builder: (context, snapshot) {
                 if (!snapshot.hasData)
                   return const Center(child: CircularProgressIndicator());
-
                 final docs = snapshot.data!.docs;
 
                 return ListView.builder(
                   itemCount: docs.length,
                   itemBuilder: (context, index) {
                     final data = docs[index].data();
+                    if (data['role'] == 'pt') return const SizedBox();
+
                     final fullName =
                         '${data['firstName'] ?? ''} ${data['lastName'] ?? ''}';
                     final profileUrl = data['profilePictureUrl'];
@@ -172,7 +174,6 @@ class _PTDashboardPageState extends State<PTDashboardPage> {
               },
             ),
           ),
-
           if (_showDetailsPanel)
             Positioned.fill(
               child: GestureDetector(
@@ -180,7 +181,6 @@ class _PTDashboardPageState extends State<PTDashboardPage> {
                 child: Container(color: Colors.black.withOpacity(0.4)),
               ),
             ),
-
           AnimatedPositioned(
             duration: const Duration(milliseconds: 300),
             right:
@@ -193,17 +193,17 @@ class _PTDashboardPageState extends State<PTDashboardPage> {
             child: Material(
               elevation: 10,
               color: const Color(0xFF1A1A1A),
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child:
-                    _selectedUser == null
-                        ? const Center(
-                          child: Text(
-                            'Nenhum aluno selecionado',
-                            style: TextStyle(color: Colors.white70),
-                          ),
-                        )
-                        : Column(
+              child:
+                  _selectedUser == null
+                      ? const Center(
+                        child: Text(
+                          'Nenhum aluno selecionado',
+                          style: TextStyle(color: Colors.white70),
+                        ),
+                      )
+                      : SingleChildScrollView(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Align(
@@ -216,16 +216,33 @@ class _PTDashboardPageState extends State<PTDashboardPage> {
                                 onPressed: _closePanel,
                               ),
                             ),
-                            const SizedBox(height: 20),
-                            Text(
-                              '${_selectedUser!['firstName']} ${_selectedUser!['lastName']}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
+                            const SizedBox(height: 10),
+                            Center(
+                              child: CircleAvatar(
+                                radius: 45,
+                                backgroundImage:
+                                    _selectedUser!['profilePictureUrl'] != null
+                                        ? NetworkImage(
+                                          _selectedUser!['profilePictureUrl'],
+                                        )
+                                        : const AssetImage(
+                                              'assets/images/default_avatar.png',
+                                            )
+                                            as ImageProvider,
                               ),
                             ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 16),
+                            Center(
+                              child: Text(
+                                '${_selectedUser!['firstName']} ${_selectedUser!['lastName']}',
+                                style: const TextStyle(
+                                  fontSize: 22,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
                             Text(
                               'Peso: ${_selectedUser!['weight']} kg',
                               style: const TextStyle(color: Colors.white70),
@@ -247,17 +264,46 @@ class _PTDashboardPageState extends State<PTDashboardPage> {
                               ),
                             ),
                             const SizedBox(height: 10),
-                            if ((_selectedUser!['plan'] as List?)?.isNotEmpty ??
+                            if ((_selectedUser!['plan'] as Map?)?.isNotEmpty ??
                                 false)
-                              ...(_selectedUser!['plan'] as List)
-                                  .map(
-                                    (e) => Text(
-                                      '- $e',
-                                      style: const TextStyle(
-                                        color: Colors.white70,
-                                      ),
-                                    ),
-                                  )
+                              ...(_selectedUser!['plan']
+                                      as Map<String, dynamic>)
+                                  .entries
+                                  .map((entry) {
+                                    final planName = entry.key;
+                                    final exercises =
+                                        (entry.value['exercises'] as List?)
+                                            ?.cast<String>() ??
+                                        [];
+                                    return Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          planName,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                        ...exercises.map(
+                                          (e) => Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 2,
+                                            ),
+                                            child: Text(
+                                              '- $e',
+                                              style: const TextStyle(
+                                                color: Colors.white70,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 12),
+                                      ],
+                                    );
+                                  })
                                   .toList()
                             else
                               const Text(
@@ -265,32 +311,77 @@ class _PTDashboardPageState extends State<PTDashboardPage> {
                                 style: TextStyle(color: Colors.white54),
                               ),
                             const SizedBox(height: 30),
-                            ElevatedButton.icon(
-                              onPressed: () {
-                                final id = _selectedUser!['id'];
-                                final name =
-                                    '${_selectedUser!['firstName']} ${_selectedUser!['lastName']}';
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder:
-                                        (_) => AssignWorkoutPage(
-                                          userId: id,
-                                          userName: name,
-                                        ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                ElevatedButton.icon(
+                                  onPressed: () {
+                                    final id = _selectedUser!['id'];
+                                    final name =
+                                        '${_selectedUser!['firstName']} ${_selectedUser!['lastName']}';
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (_) => AssignWorkoutPage(
+                                              userId: id,
+                                              userName: name,
+                                            ),
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.fitness_center),
+                                  label: const Text('Criar Plano de Treino'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blueAccent,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
                                   ),
-                                );
-                              },
-                              icon: const Icon(Icons.fitness_center),
-                              label: const Text('Criar Plano de Treino'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blueAccent,
-                                foregroundColor: Colors.white,
-                              ),
+                                ),
+                                const SizedBox(width: 12),
+                                ElevatedButton.icon(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (_) => ViewWorkoutsPage(
+                                              userEmail:
+                                                  _selectedUser!['email'],
+                                              userName:
+                                                  '${_selectedUser!['firstName']} ${_selectedUser!['lastName']}',
+                                            ),
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.view_list),
+                                  label: const Text('Planos de Treino'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    foregroundColor: Colors.grey[800],
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    textStyle: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-              ),
+                      ),
             ),
           ),
         ],
