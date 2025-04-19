@@ -39,7 +39,7 @@ class _PTDashboardPageState extends State<PTDashboardPage> {
             const DrawerHeader(
               decoration: BoxDecoration(color: Colors.blueAccent),
               child: Text(
-                'Menu da PT',
+                'Menu Principal',
                 style: TextStyle(color: Colors.white, fontSize: 24),
               ),
             ),
@@ -69,7 +69,7 @@ class _PTDashboardPageState extends State<PTDashboardPage> {
         ),
       ),
       appBar: AppBar(
-        title: const Text('Dashboard da PT'),
+        title: const Text('Dashboard'),
         leading: Builder(
           builder:
               (context) => Padding(
@@ -186,10 +186,10 @@ class _PTDashboardPageState extends State<PTDashboardPage> {
             right:
                 _showDetailsPanel
                     ? 0
-                    : -MediaQuery.of(context).size.width * 0.6,
+                    : -MediaQuery.of(context).size.width * 0.3,
             top: 0,
             bottom: 0,
-            width: MediaQuery.of(context).size.width * 0.6,
+            width: MediaQuery.of(context).size.width * 0.3,
             child: Material(
               elevation: 10,
               color: const Color(0xFF1A1A1A),

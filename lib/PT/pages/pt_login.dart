@@ -30,7 +30,7 @@ class _PTLoginPageState extends State<PTLoginPage> {
 
       final doc =
           await FirebaseFirestore.instance
-              .collection('users')
+              .collection('superuser')
               .doc(cred.user!.uid)
               .get();
 
@@ -97,7 +97,7 @@ class _PTLoginPageState extends State<PTLoginPage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Text(
-                  'Login PT',
+                  'Login as a Personal Trainer',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 26,
