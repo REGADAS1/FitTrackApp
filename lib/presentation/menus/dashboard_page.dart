@@ -33,7 +33,6 @@ class _DashboardPageState extends State<DashboardPage> {
               .doc(user.uid)
               .get();
       final data = doc.data();
-
       if (data != null) {
         setState(() {
           _name = data['firstName'] ?? '';
@@ -86,6 +85,7 @@ class _DashboardPageState extends State<DashboardPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Topo: Nome e perfil
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -125,6 +125,8 @@ class _DashboardPageState extends State<DashboardPage> {
                     ],
                   ),
                   const SizedBox(height: 30),
+
+                  // Secção de progresso
                   const Text(
                     'Progresso de Peso',
                     style: TextStyle(
@@ -139,6 +141,8 @@ class _DashboardPageState extends State<DashboardPage> {
                     style: TextStyle(color: Colors.white70, fontSize: 13),
                   ),
                   const SizedBox(height: 20),
+
+                  // Gráfico
                   SizedBox(height: 160, child: _buildWeightChart()),
                 ],
               ),
@@ -159,21 +163,20 @@ class _DashboardPageState extends State<DashboardPage> {
       );
     }
 
-    final reversedData = _weightProgress;
     final spots =
-        reversedData.asMap().entries.map((entry) {
+        _weightProgress.asMap().entries.map((entry) {
           return FlSpot(entry.key.toDouble(), entry.value['weight']);
         }).toList();
 
     final labels =
-        reversedData.map((e) => DateFormat('dd/MM').format(e['date'])).toList();
+        _weightProgress
+            .map((e) => DateFormat('dd/MM').format(e['date']))
+            .toList();
 
-    final minY =
-        reversedData.map((e) => e['weight']).reduce((a, b) => a < b ? a : b) -
-        2;
-    final maxY =
-        reversedData.map((e) => e['weight']).reduce((a, b) => a > b ? a : b) +
-        2;
+    final uniqueWeights =
+        _weightProgress.map((e) => e['weight'].toDouble()).toSet().toList();
+
+    uniqueWeights.sort();
 
     return Padding(
       padding: const EdgeInsets.only(right: 12.0),
@@ -184,9 +187,9 @@ class _DashboardPageState extends State<DashboardPage> {
             width: spots.length * 60,
             child: LineChart(
               LineChartData(
-                minY: minY,
-                maxY: maxY,
                 backgroundColor: Colors.transparent,
+                minY: uniqueWeights.first - 1,
+                maxY: uniqueWeights.last + 1,
                 titlesData: FlTitlesData(
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
@@ -214,18 +217,20 @@ class _DashboardPageState extends State<DashboardPage> {
                     sideTitles: SideTitles(
                       showTitles: true,
                       reservedSize: 36,
-                      interval: 1,
                       getTitlesWidget: (value, _) {
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 4.0),
-                          child: Text(
-                            '${value.toStringAsFixed(0)} kg',
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 10,
+                        if (uniqueWeights.contains(value)) {
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 4.0),
+                            child: Text(
+                              '${value.toStringAsFixed(1)} kg',
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 10,
+                              ),
                             ),
-                          ),
-                        );
+                          );
+                        }
+                        return const SizedBox.shrink();
                       },
                     ),
                   ),

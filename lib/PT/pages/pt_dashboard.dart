@@ -1,5 +1,7 @@
+import 'package:fit_track_app/PT/widgets/pt_sidebar.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'exercise_list.dart';
 import 'assign_workout.dart';
 import 'view_workouts.dart';
@@ -32,63 +34,19 @@ class _PTDashboardPageState extends State<PTDashboardPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      drawer: Drawer(
-        backgroundColor: const Color(0xFF1A1A1A),
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            const DrawerHeader(
-              decoration: BoxDecoration(color: Colors.blueAccent),
-              child: Text(
-                'Menu Principal',
-                style: TextStyle(color: Colors.white, fontSize: 24),
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.home, color: Colors.white),
-              title: const Text(
-                'Dashboard',
-                style: TextStyle(color: Colors.white),
-              ),
-              onTap: () => Navigator.pop(context),
-            ),
-            ListTile(
-              leading: const Icon(Icons.fitness_center, color: Colors.white),
-              title: const Text(
-                'Lista de Exercícios',
-                style: TextStyle(color: Colors.white),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ExerciseListPage()),
-                );
-              },
-            ),
-          ],
-        ),
-      ),
+      drawer: const PTSidebar(currentRoute: '/dashboard'),
       appBar: AppBar(
+        backgroundColor: const Color(0xFF1A1A1A),
         title: const Text('Dashboard'),
         leading: Builder(
           builder:
-              (context) => Padding(
-                padding: const EdgeInsets.only(left: 12),
-                child: GestureDetector(
-                  onTap: () => Scaffold.of(context).openDrawer(),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white10,
-                      shape: BoxShape.circle,
-                    ),
-                    padding: const EdgeInsets.all(8),
-                    child: const Icon(Icons.menu, color: Colors.white),
-                  ),
-                ),
+              (context) => IconButton(
+                icon: const Icon(Icons.menu, color: Colors.white),
+                onPressed: () => Scaffold.of(context).openDrawer(),
               ),
         ),
       ),
+      backgroundColor: const Color(0xFF1A1A1A),
       body: Stack(
         children: [
           Padding(
@@ -97,8 +55,10 @@ class _PTDashboardPageState extends State<PTDashboardPage> {
               stream:
                   FirebaseFirestore.instance.collection('users').snapshots(),
               builder: (context, snapshot) {
-                if (!snapshot.hasData)
+                if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
+                }
+
                 final docs = snapshot.data!.docs;
 
                 return ListView.builder(
@@ -275,6 +235,7 @@ class _PTDashboardPageState extends State<PTDashboardPage> {
                                         (entry.value['exercises'] as List?)
                                             ?.cast<String>() ??
                                         [];
+
                                     return Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,

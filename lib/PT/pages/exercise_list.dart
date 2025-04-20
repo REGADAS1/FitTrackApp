@@ -1,10 +1,12 @@
 import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fit_track_app/PT/widgets/pt_sidebar.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker_web/image_picker_web.dart';
 
 import 'pt_dashboard.dart';
 import 'package:fit_track_app/data/sources/cloudinary_service.dart';
+import 'package:fit_track_app/data/core/configs/theme/assets/app_images.dart';
 
 class ExerciseListPage extends StatefulWidget {
   const ExerciseListPage({super.key});
@@ -83,6 +85,7 @@ class _ExerciseListPageState extends State<ExerciseListPage> {
 
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: const Color(0xFF1A1A1A),
         title: const Text('Lista de Exercícios'),
         actions: [
           DropdownButton<String>(
@@ -105,46 +108,8 @@ class _ExerciseListPageState extends State<ExerciseListPage> {
           const SizedBox(width: 16),
         ],
       ),
-      drawer: Drawer(
-        backgroundColor: const Color(0xFF1A1A1A),
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            const DrawerHeader(
-              decoration: BoxDecoration(color: Colors.blueAccent),
-              child: Text(
-                'Menu da PT',
-                style: TextStyle(color: Colors.white, fontSize: 24),
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.home, color: Colors.white),
-              title: const Text(
-                'Dashboard',
-                style: TextStyle(color: Colors.white),
-              ),
-              onTap: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const PTDashboardPage()),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.fitness_center, color: Colors.white),
-              title: const Text(
-                'Lista de Exercícios',
-                style: TextStyle(color: Colors.white),
-              ),
-              onTap: () {
-                Navigator.pop(context); // fecha o drawer
-                // já estás nesta página, mas se quiseres redirecionar de novo:
-                // Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ExerciseListPage()));
-              },
-            ),
-          ],
-        ),
-      ),
+      drawer: const PTSidebar(currentRoute: '/exercicios'),
+      backgroundColor: const Color(0xFF1A1A1A),
       body: Stack(
         children: [
           Padding(
@@ -152,8 +117,9 @@ class _ExerciseListPageState extends State<ExerciseListPage> {
             child: StreamBuilder(
               stream: query.snapshots(),
               builder: (context, snapshot) {
-                if (!snapshot.hasData)
+                if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
+                }
 
                 final exercises =
                     snapshot.data!.docs.where((doc) {
