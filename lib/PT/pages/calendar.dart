@@ -64,6 +64,7 @@ class _CalendarPageState extends State<CalendarPage> {
     DateTime selectedEnd = end ?? selectedStart.add(const Duration(hours: 1));
     Color selectedColor = color ?? Colors.green;
     final formKey = GlobalKey<FormState>();
+    final isEditing = docId != null;
 
     await showDialog(
       context: context,
@@ -75,9 +76,9 @@ class _CalendarPageState extends State<CalendarPage> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
-                title: const Text(
-                  "Agendar Disponibilidade",
-                  style: TextStyle(color: Colors.white),
+                title: Text(
+                  isEditing ? 'Alterar Evento' : 'Agendar Disponibilidade',
+                  style: const TextStyle(color: Colors.white),
                 ),
                 content: Form(
                   key: formKey,
@@ -197,6 +198,28 @@ class _CalendarPageState extends State<CalendarPage> {
                   ),
                 ),
                 actions: [
+                  if (isEditing)
+                    TextButton(
+                      onPressed: () async {
+                        Navigator.pop(context);
+                        await _firestore
+                            .collection('availability')
+                            .doc(docId)
+                            .delete();
+                        _loadData();
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            backgroundColor: Colors.redAccent,
+                            content: Text("Evento eliminado com sucesso."),
+                          ),
+                        );
+                      },
+                      child: const Text(
+                        "Eliminar",
+                        style: TextStyle(color: Colors.redAccent),
+                      ),
+                    ),
                   TextButton(
                     onPressed: () => Navigator.pop(context),
                     child: const Text(
@@ -224,6 +247,28 @@ class _CalendarPageState extends State<CalendarPage> {
                         await _firestore.collection('availability').add(doc);
                       }
 
+                      final formattedDay = DateFormat.EEEE(
+                        'pt_PT',
+                      ).format(selectedStart);
+                      final formattedMonth = DateFormat.MMMM(
+                        'pt_PT',
+                      ).format(selectedStart);
+                      final dayNumber = selectedStart.day;
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          backgroundColor: const Color.fromARGB(
+                            221,
+                            19,
+                            89,
+                            125,
+                          ),
+                          content: Text(
+                            '${isEditing ? 'Evento atualizado' : 'Evento criado'} para $formattedDay, dia $dayNumber de $formattedMonth.',
+                          ),
+                        ),
+                      );
+
                       Navigator.pop(context);
                       _loadData();
                     },
@@ -246,7 +291,7 @@ class _CalendarPageState extends State<CalendarPage> {
       backgroundColor: const Color(0xFF1A1A1A),
       appBar: AppBar(
         backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('Calendário da PT'),
+        title: const Text('Calendário'),
         leading: Builder(
           builder:
               (context) => IconButton(
