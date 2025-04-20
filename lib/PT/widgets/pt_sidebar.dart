@@ -1,5 +1,6 @@
 // lib/widgets/pt_sidebar.dart
 
+import 'package:fit_track_app/PT/pages/calendar.dart';
 import 'package:flutter/material.dart';
 import 'package:fit_track_app/data/core/configs/theme/assets/app_images.dart';
 import 'package:fit_track_app/PT/pages/pt_dashboard.dart';
@@ -50,6 +51,13 @@ class PTSidebar extends StatelessWidget {
             label: 'Exercícios',
             route: '/exercicios',
             destination: const ExerciseListPage(),
+          ),
+          _buildMenuItem(
+            context,
+            icon: Icons.calendar_today,
+            label: 'Calendário',
+            route: '/calendar',
+            destination: const CalendarPage(),
           ),
         ],
       ),

@@ -49,6 +49,7 @@ dependencies:
   fl_chart:
   intl:
   image_picker_web:
+  syncfusion_flutter_calendar:
 
 dev_dependencies:
   flutter_test:
