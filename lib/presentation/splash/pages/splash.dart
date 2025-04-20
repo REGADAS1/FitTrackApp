@@ -1,7 +1,6 @@
-import 'package:fit_track_app/data/core/configs/theme/assets/app_vectors.dart';
+import 'package:fit_track_app/data/core/configs/theme/assets/app_images.dart';
 import 'package:fit_track_app/presentation/splash/intro/pages/get_started.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -19,7 +18,15 @@ class _SplashPageState extends State<SplashPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(body: Center(child: SvgPicture.asset(AppVectors.logo)));
+    return Scaffold(
+      backgroundColor: const Color(0xFF1A1A1A),
+      body: Center(
+        child: Image.asset(
+          'assets/images/nvrtap_white.png',
+          width: 220, // Tamanho ajustável
+        ),
+      ),
+    );
   }
 
   Future<void> redirect() async {

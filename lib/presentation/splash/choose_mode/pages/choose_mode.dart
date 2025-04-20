@@ -1,7 +1,6 @@
 import 'dart:ui';
 
 import 'package:fit_track_app/data/core/configs/theme/assets/app_images.dart';
-import 'package:fit_track_app/data/core/configs/theme/assets/app_vectors.dart';
 import 'package:fit_track_app/presentation/auth/pages/signup_or_signin.dart';
 import 'package:fit_track_app/presentation/splash/choose_mode/pages/bloc/theme_cubit.dart';
 import 'package:flutter/material.dart';
@@ -33,11 +32,11 @@ class ChooseModePage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Logo
-                  SvgPicture.asset(
-                    AppVectors.logo_white,
+                  // Logo PNG (em vez de SVG)
+                  Image.asset(
+                    'assets/images/nvrtap_white.png',
+                    height: 220,
                     alignment: Alignment.topCenter,
-                    height: 250,
                   ),
 
                   // Espaço após logo
@@ -55,10 +54,7 @@ class ChooseModePage extends StatelessWidget {
                         ),
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(
-                        height: 5,
-                      ), // Espaçamento de 5px entre texto e botões
-                      // Botões de modo
+                      const SizedBox(height: 5),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -89,7 +85,7 @@ class ChooseModePage extends StatelessWidget {
                                       child: Padding(
                                         padding: const EdgeInsets.all(20),
                                         child: SvgPicture.asset(
-                                          AppVectors.moon,
+                                          'assets/vectors/moon.svg',
                                           fit: BoxFit.scaleDown,
                                         ),
                                       ),
@@ -136,7 +132,7 @@ class ChooseModePage extends StatelessWidget {
                                       child: Padding(
                                         padding: const EdgeInsets.all(20),
                                         child: SvgPicture.asset(
-                                          AppVectors.sun,
+                                          'assets/vectors/sun.svg',
                                           fit: BoxFit.scaleDown,
                                         ),
                                       ),
@@ -160,7 +156,8 @@ class ChooseModePage extends StatelessWidget {
                     ],
                   ),
 
-                  const Spacer(), // empurra o botão "Começa Já" para o fim da tela
+                  const Spacer(),
+
                   // Botão branco "Começa Já"
                   SizedBox(
                     width: double.infinity,

@@ -6,4 +6,6 @@ class AppImages {
   static const String logoWhite = '${basePath}splash_page_logo_white.png';
   static const String chooseModeBG = '${basePath}choose_mode_fundo.png';
   static const String signupOrsigninBG = '${basePath}signup_or_signin_page.png';
+  static const String nvrtap_white =
+      '${basePath}splash_page_logo_white_nvrtap.png';
 }

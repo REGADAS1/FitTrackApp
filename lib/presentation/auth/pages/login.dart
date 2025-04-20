@@ -2,10 +2,8 @@ import 'dart:async';
 import 'package:fit_track_app/presentation/auth/pages/signup.dart';
 import 'package:fit_track_app/presentation/auth/pages/check_profile.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import 'package:fit_track_app/data/core/configs/theme/assets/app_vectors.dart';
 import 'package:fit_track_app/data/core/configs/theme/assets/app_images.dart';
 
 class LoginPage extends StatelessWidget {
@@ -76,8 +74,11 @@ class LoginPage extends StatelessWidget {
                   ),
                   child: Column(
                     children: [
-                      // Logo
-                      SvgPicture.asset(AppVectors.logo_white, height: 250),
+                      // Logo PNG
+                      Image.asset(
+                        'assets/images/nvrtap_white.png',
+                        height: 160,
+                      ),
                       const SizedBox(height: 0),
 
                       // Email
@@ -144,7 +145,6 @@ class LoginPage extends StatelessWidget {
                                 const Duration(milliseconds: 1500),
                               );
 
-                              // Redireciona para verificação de perfil
                               Navigator.pushReplacement(
                                 context,
                                 MaterialPageRoute(

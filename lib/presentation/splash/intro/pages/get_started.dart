@@ -27,10 +27,15 @@ class GetStartedPage extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Logo em PNG
-                  Image.asset(AppImages.logoWhite, height: 250),
+                  // Logo PNG (imagem centralizada)
+                  Center(
+                    child: Image.asset(
+                      'assets/images/nvrtap_white.png',
+                      height: 240,
+                    ),
+                  ),
 
-                  // Bloco com texto + botão colados
+                  // Bloco com texto + botão
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [

@@ -1,10 +1,8 @@
 import 'package:fit_track_app/presentation/auth/pages/signup.dart';
-import 'package:fit_track_app/presentation/auth/pages/login.dart'; // <-- import da nova LoginPage
+import 'package:fit_track_app/presentation/auth/pages/login.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 import 'package:fit_track_app/data/core/configs/theme/assets/app_images.dart';
-import 'package:fit_track_app/data/core/configs/theme/assets/app_vectors.dart';
 
 class SignUpOrSignInPage extends StatelessWidget {
   const SignUpOrSignInPage({super.key});
@@ -32,9 +30,11 @@ class SignUpOrSignInPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   const SizedBox(height: 100),
-                  SvgPicture.asset(AppVectors.logo_white, height: 250),
-                  const SizedBox(height: 50),
 
+                  // LOGO em PNG
+                  Image.asset('assets/images/nvrtap_white.png', height: 200),
+
+                  const SizedBox(height: 50),
                   const Text(
                     'Começa hoje!',
                     style: TextStyle(
@@ -46,7 +46,7 @@ class SignUpOrSignInPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
 
-                  // Botão Login com transição
+                  // Botão Login
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -58,7 +58,7 @@ class SignUpOrSignInPage extends StatelessWidget {
                               animation,
                               secondaryAnimation,
                             ) {
-                              return LoginPage(); // <-- aqui vai para a LoginPage real
+                              return LoginPage();
                             },
                             transitionsBuilder: (
                               context,
@@ -93,7 +93,7 @@ class SignUpOrSignInPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
 
-                  // Sign Up com transição
+                  // Link de Registo
                   GestureDetector(
                     onTap: () {
                       Navigator.of(context).push(
