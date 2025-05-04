@@ -50,6 +50,7 @@ dependencies:
   intl:
   image_picker_web:
   syncfusion_flutter_calendar:
+  syncfusion_flutter_datepicker:
 
 dev_dependencies:
   flutter_test:

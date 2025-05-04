@@ -630,7 +630,7 @@ packages:
     source: hosted
     version: "29.1.38"
   syncfusion_flutter_datepicker:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: syncfusion_flutter_datepicker
       sha256: "4abc505985b120e4a126114bb65b12dd15279c839d12464504f3596822a740ec"
