@@ -36,10 +36,15 @@ class _CalendarPageState extends State<CalendarPage> {
     final appointments =
         snapshot.docs.map((doc) {
           final data = doc.data();
+          final subject =
+              data['userName'] != null && data['userName'].toString().isNotEmpty
+                  ? '${data['title']}\n${data['userName']}'
+                  : data['title'] ?? 'Disponível';
+
           return Appointment(
             startTime: (data['start'] as Timestamp).toDate(),
             endTime: (data['end'] as Timestamp).toDate(),
-            subject: data['title'] ?? 'Disponível',
+            subject: subject,
             color: Color(data['color'] ?? Colors.green.value),
             id: doc.id,
           );
@@ -67,9 +72,9 @@ class _CalendarPageState extends State<CalendarPage> {
     final isEditing = docId != null;
 
     String? selectedUserId;
+    String? selectedUserName;
     List<Map<String, String>> users = [];
 
-    // Carregar lista de alunos
     final usersSnapshot = await _firestore.collection('users').get();
     users =
         usersSnapshot.docs.map((doc) {
@@ -80,11 +85,12 @@ class _CalendarPageState extends State<CalendarPage> {
           };
         }).toList();
 
-    // Se estiver a editar, buscar o userId já associado (se existir)
     if (isEditing) {
       final existingDoc =
           await _firestore.collection('availability').doc(docId).get();
-      selectedUserId = existingDoc.data()?['userId'];
+      final data = existingDoc.data();
+      selectedUserId = data?['userId'];
+      selectedUserName = data?['userName'];
     }
 
     await showDialog(
@@ -120,13 +126,19 @@ class _CalendarPageState extends State<CalendarPage> {
                                     : null,
                       ),
                       const SizedBox(height: 12),
-                      // Dropdown de alunos
                       if (users.isNotEmpty)
                         DropdownButtonFormField<String>(
                           value: selectedUserId,
-                          onChanged:
-                              (value) =>
-                                  setModalState(() => selectedUserId = value),
+                          onChanged: (value) {
+                            final user = users.firstWhere(
+                              (u) => u['id'] == value,
+                              orElse: () => {},
+                            );
+                            setModalState(() {
+                              selectedUserId = value;
+                              selectedUserName = user['name'];
+                            });
+                          },
                           items: [
                             const DropdownMenuItem(
                               value: null,
@@ -255,7 +267,6 @@ class _CalendarPageState extends State<CalendarPage> {
                             .doc(docId)
                             .delete();
                         _loadData();
-
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             backgroundColor: Colors.redAccent,
@@ -285,6 +296,8 @@ class _CalendarPageState extends State<CalendarPage> {
                         'title': titleController.text.trim(),
                         'color': selectedColor.value,
                         if (selectedUserId != null) 'userId': selectedUserId,
+                        if (selectedUserName != null)
+                          'userName': selectedUserName,
                       };
 
                       if (docId != null) {
@@ -356,18 +369,32 @@ class _CalendarPageState extends State<CalendarPage> {
         backgroundColor: const Color(0xFF1A1A1A),
         appointmentBuilder: (context, details) {
           final Appointment appointment = details.appointments.first;
+          final parts = appointment.subject.split('\n');
+          final title = parts[0];
+          final name = parts.length > 1 ? parts[1] : null;
+
           return Container(
             decoration: BoxDecoration(
               color: appointment.color,
               borderRadius: BorderRadius.circular(6),
             ),
             padding: const EdgeInsets.all(6),
-            child: Text(
-              appointment.subject,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (name != null)
+                  Text(
+                    name,
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+              ],
             ),
           );
         },
@@ -388,10 +415,11 @@ class _CalendarPageState extends State<CalendarPage> {
         onTap: (details) {
           if (details.targetElement == CalendarElement.appointment) {
             final appointment = details.appointments!.first as Appointment;
+            final parts = appointment.subject.split('\n');
             _openEventDialog(
               start: appointment.startTime,
               end: appointment.endTime,
-              title: appointment.subject,
+              title: parts[0],
               color: appointment.color,
               docId: appointment.id as String?,
             );
