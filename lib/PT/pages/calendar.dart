@@ -66,6 +66,27 @@ class _CalendarPageState extends State<CalendarPage> {
     final formKey = GlobalKey<FormState>();
     final isEditing = docId != null;
 
+    String? selectedUserId;
+    List<Map<String, String>> users = [];
+
+    // Carregar lista de alunos
+    final usersSnapshot = await _firestore.collection('users').get();
+    users =
+        usersSnapshot.docs.map((doc) {
+          final data = doc.data();
+          return {
+            'id': doc.id,
+            'name': '${data['firstName']} ${data['lastName'] ?? ''}'.trim(),
+          };
+        }).toList();
+
+    // Se estiver a editar, buscar o userId já associado (se existir)
+    if (isEditing) {
+      final existingDoc =
+          await _firestore.collection('availability').doc(docId).get();
+      selectedUserId = existingDoc.data()?['userId'];
+    }
+
     await showDialog(
       context: context,
       builder:
@@ -98,6 +119,33 @@ class _CalendarPageState extends State<CalendarPage> {
                                     ? 'Insere um título'
                                     : null,
                       ),
+                      const SizedBox(height: 12),
+                      // Dropdown de alunos
+                      if (users.isNotEmpty)
+                        DropdownButtonFormField<String>(
+                          value: selectedUserId,
+                          onChanged:
+                              (value) =>
+                                  setModalState(() => selectedUserId = value),
+                          items: [
+                            const DropdownMenuItem(
+                              value: null,
+                              child: Text("Sem aluno atribuído"),
+                            ),
+                            ...users.map(
+                              (user) => DropdownMenuItem(
+                                value: user['id'],
+                                child: Text(user['name']!),
+                              ),
+                            ),
+                          ],
+                          dropdownColor: const Color(0xFF2C2C2C),
+                          style: const TextStyle(color: Colors.white),
+                          decoration: const InputDecoration(
+                            labelText: "Atribuir a aluno (opcional)",
+                            labelStyle: TextStyle(color: Colors.white70),
+                          ),
+                        ),
                       const SizedBox(height: 12),
                       Row(
                         children: [
@@ -236,6 +284,7 @@ class _CalendarPageState extends State<CalendarPage> {
                         'end': Timestamp.fromDate(selectedEnd),
                         'title': titleController.text.trim(),
                         'color': selectedColor.value,
+                        if (selectedUserId != null) 'userId': selectedUserId,
                       };
 
                       if (docId != null) {
