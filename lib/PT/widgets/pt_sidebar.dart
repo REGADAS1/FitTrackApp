@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:fit_track_app/data/core/configs/theme/assets/app_images.dart';
 import 'package:fit_track_app/PT/pages/pt_dashboard.dart';
 import 'package:fit_track_app/PT/pages/exercise_list.dart';
+import 'package:fit_track_app/PT/pages/pt_chat_page.dart';
 
 class PTSidebar extends StatelessWidget {
   final String currentRoute;
@@ -58,6 +59,13 @@ class PTSidebar extends StatelessWidget {
             label: 'Calendário',
             route: '/calendar',
             destination: const CalendarPage(),
+          ),
+          _buildMenuItem(
+            context,
+            icon: Icons.chat,
+            label: 'Chat',
+            route: '/chat',
+            destination: const PTChatPage(),
           ),
         ],
       ),
