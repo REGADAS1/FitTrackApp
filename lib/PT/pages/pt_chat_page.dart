@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 
 import 'package:fit_track_app/data/sources/cloudinary_service.dart';
+import 'package:fit_track_app/PT/widgets/pt_sidebar.dart';
 
 class PTChatPage extends StatefulWidget {
   const PTChatPage({super.key});
@@ -91,7 +92,6 @@ class _PTChatPageState extends State<PTChatPage> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Nome + botão de selecionar foto
                         Row(
                           children: [
                             Expanded(
@@ -125,7 +125,6 @@ class _PTChatPageState extends State<PTChatPage> {
                           ],
                         ),
                         const SizedBox(height: 12),
-                        // Preview da imagem
                         if (groupImageData != null ||
                             (initialPhoto != null &&
                                 initialPhoto!.isNotEmpty)) ...[
@@ -156,7 +155,6 @@ class _PTChatPageState extends State<PTChatPage> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        // Chips de seleção
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
@@ -286,33 +284,21 @@ class _PTChatPageState extends State<PTChatPage> {
     final currentUser = _auth.currentUser!;
 
     return Scaffold(
+      drawer: const PTSidebar(currentRoute: '/chat'),
       appBar: AppBar(
         backgroundColor: Colors.black87,
-        title:
-            selectedChat != null
-                ? Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundImage:
-                          (selectedChat!['photo'] as String?)?.isNotEmpty ==
-                                  true
-                              ? NetworkImage(selectedChat!['photo'] as String)
-                              : null,
-                    ),
-                    const SizedBox(width: 10),
-                    Text(selectedChat!['name'] as String),
-                    const Spacer(),
-                    if (isGroup)
-                      IconButton(
-                        icon: const Icon(Icons.settings),
-                        onPressed: () => _createOrEditGroup(edit: true),
-                      ),
-                  ],
-                )
-                : const Text('Chat'),
+        leading: Builder(
+          builder:
+              (context) => IconButton(
+                icon: const Icon(Icons.menu, color: Colors.white),
+                onPressed: () => Scaffold.of(context).openDrawer(),
+              ),
+        ),
+        title: const Text('Chat'),
       ),
       body: Row(
         children: [
+          // Menu lateral
           Container(
             width: 280,
             color: Colors.grey[900],
@@ -376,13 +362,63 @@ class _PTChatPageState extends State<PTChatPage> {
             ),
           ),
           const VerticalDivider(width: 1, color: Colors.white24),
+          // Painel de chat
           Expanded(
             child: Column(
               children: [
+                // Cabeçalho no painel direito
+                if (selectedChat != null) ...[
+                  Container(
+                    color: const Color(0xFF2C2C2C),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundImage:
+                              (selectedChat!['photo'] as String?)?.isNotEmpty ==
+                                      true
+                                  ? NetworkImage(
+                                    selectedChat!['photo'] as String,
+                                  )
+                                  : null,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            selectedChat!['name'] as String,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (isGroup)
+                          IconButton(
+                            icon: const Icon(
+                              Icons.settings,
+                              color: Colors.white,
+                            ),
+                            onPressed: () => _createOrEditGroup(edit: true),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const Divider(color: Colors.white24),
+                ],
+                // Lista de mensagens
                 Expanded(
                   child:
                       selectedChat == null
-                          ? const Center(child: Text('Seleciona um chat'))
+                          ? const Center(
+                            child: Text(
+                              'Seleciona um chat',
+                              style: TextStyle(color: Colors.white70),
+                            ),
+                          )
                           : StreamBuilder<QuerySnapshot>(
                             stream:
                                 _firestore
@@ -446,6 +482,7 @@ class _PTChatPageState extends State<PTChatPage> {
                             },
                           ),
                 ),
+                // Input
                 if (selectedChat != null)
                   Padding(
                     padding: const EdgeInsets.all(8.0),
@@ -482,26 +519,4 @@ class _PTChatPageState extends State<PTChatPage> {
       ),
     );
   }
-}
-
-class ChatUser {
-  final String id;
-  final String name;
-  final String photo;
-
-  ChatUser({required this.id, required this.name, required this.photo});
-}
-
-class ChatGroup {
-  final String id;
-  final String name;
-  final String photo;
-  final List<String> members;
-
-  ChatGroup({
-    required this.id,
-    required this.name,
-    required this.photo,
-    required this.members,
-  });
 }
