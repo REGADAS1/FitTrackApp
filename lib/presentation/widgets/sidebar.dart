@@ -1,3 +1,4 @@
+import 'package:fit_track_app/presentation/menus/chat_page.dart';
 import 'package:fit_track_app/presentation/menus/dashboard_page.dart';
 import 'package:fit_track_app/presentation/menus/training_plans.dart';
 import 'package:flutter/material.dart';
@@ -60,6 +61,18 @@ class Sidebar extends StatelessWidget {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const TrainingPlansPage()),
               );
+              onClose();
+            },
+          ),
+
+          // Opção: Definições
+          ListTile(
+            leading: const Icon(Icons.settings, color: Colors.white),
+            title: const Text('Chat', style: TextStyle(color: Colors.white)),
+            onTap: () {
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const ChatPage()));
               onClose();
             },
           ),
