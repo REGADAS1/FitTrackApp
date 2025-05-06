@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fit_track_app/presentation/menus/user_profile_page.dart';
+import 'package:fit_track_app/presentation/widgets/sidebar.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
@@ -16,6 +17,9 @@ class _DashboardPageState extends State<DashboardPage> {
   String _name = '';
   String? _profileImage;
   List<Map<String, dynamic>> _weightProgress = [];
+
+  double _sidebarXOffset = -250;
+  bool _isDragging = false;
 
   @override
   void initState() {
@@ -68,88 +72,145 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF1E1E1E), Color(0xFF111111)],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+      body: GestureDetector(
+        onHorizontalDragStart: (details) {
+          _isDragging = true;
+        },
+        onHorizontalDragUpdate: (details) {
+          if (_isDragging) {
+            setState(() {
+              _sidebarXOffset += details.delta.dx;
+              _sidebarXOffset = _sidebarXOffset.clamp(-250, 0);
+            });
+          }
+        },
+        onHorizontalDragEnd: (details) {
+          _isDragging = false;
+          setState(() {
+            if (_sidebarXOffset > -125) {
+              _sidebarXOffset = 0;
+            } else {
+              _sidebarXOffset = -250;
+            }
+          });
+        },
+        child: Stack(
+          children: [
+            // Conteúdo principal
+            Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF1E1E1E), Color(0xFF111111)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
               ),
-            ),
-          ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Topo: Nome e perfil
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(
-                          _name.isNotEmpty ? 'Bem-vindo, $_name' : 'Bem-vindo',
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const UserProfilePage(),
-                            ),
-                          );
-                        },
-                        child: CircleAvatar(
-                          radius: 28,
-                          backgroundColor: Colors.white24,
-                          backgroundImage:
-                              _profileImage != null
-                                  ? NetworkImage(_profileImage!)
-                                  : const AssetImage(
-                                        'assets/images/default_avatar.png',
-                                      )
-                                      as ImageProvider,
-                        ),
-                      ),
+                      _buildTopBar(),
+                      const SizedBox(height: 30),
+                      _buildWeightSection(),
+                      const SizedBox(height: 20),
+                      SizedBox(height: 160, child: _buildWeightChart()),
                     ],
                   ),
-                  const SizedBox(height: 30),
-
-                  // Secção de progresso
-                  const Text(
-                    'Progresso de Peso',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Acede ao teu perfil e pesa-te diariamente para acompanhares a tua evolução.',
-                    style: TextStyle(color: Colors.white70, fontSize: 13),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Gráfico
-                  SizedBox(height: 160, child: _buildWeightChart()),
-                ],
+                ),
               ),
             ),
-          ),
-        ],
+
+            // Fundo para fechar a sidebar ao clicar fora
+            if (_sidebarXOffset == 0)
+              Positioned.fill(
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _sidebarXOffset = -250;
+                    });
+                  },
+                  child: Container(color: Colors.black.withOpacity(0.5)),
+                ),
+              ),
+
+            // Sidebar deslizante
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 300),
+              left: _sidebarXOffset,
+              top: 0,
+              bottom: 0,
+              child: Sidebar(
+                width: 250,
+                onClose: () {
+                  setState(() {
+                    _sidebarXOffset = -250;
+                  });
+                },
+              ),
+            ),
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildTopBar() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Expanded(
+          child: Text(
+            _name.isNotEmpty ? 'Bem-vindo, $_name' : 'Bem-vindo',
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        GestureDetector(
+          onTap: () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const UserProfilePage()),
+            );
+          },
+          child: CircleAvatar(
+            radius: 28,
+            backgroundColor: Colors.white24,
+            backgroundImage:
+                _profileImage != null
+                    ? NetworkImage(_profileImage!)
+                    : const AssetImage('assets/images/default_avatar.png')
+                        as ImageProvider,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWeightSection() {
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Progresso de Peso',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        SizedBox(height: 6),
+        Text(
+          'Acede ao teu perfil e pesa-te diariamente para acompanhares a tua evolução.',
+          style: TextStyle(color: Colors.white70, fontSize: 13),
+        ),
+      ],
     );
   }
 
@@ -174,9 +235,8 @@ class _DashboardPageState extends State<DashboardPage> {
             .toList();
 
     final uniqueWeights =
-        _weightProgress.map((e) => e['weight'].toDouble()).toSet().toList();
-
-    uniqueWeights.sort();
+        _weightProgress.map((e) => e['weight'].toDouble()).toSet().toList()
+          ..sort();
 
     return Padding(
       padding: const EdgeInsets.only(right: 12.0),
