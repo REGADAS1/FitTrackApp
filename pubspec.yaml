@@ -52,6 +52,7 @@ dependencies:
   syncfusion_flutter_calendar:
   syncfusion_flutter_datepicker:
   uuid:
+  file_picker:
 
 dev_dependencies:
   flutter_test:

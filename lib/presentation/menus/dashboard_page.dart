@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:fit_track_app/presentation/menus/chat_page.dart';
 import 'package:fit_track_app/presentation/menus/user_profile_page.dart';
 import 'package:fit_track_app/presentation/widgets/sidebar.dart';
 import 'package:flutter/material.dart';
@@ -69,9 +70,22 @@ class _DashboardPageState extends State<DashboardPage> {
     }
   }
 
+  void _openChat() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ChatPage()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // botão flutuante de chat
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: const Color(0xFF6EC1E4),
+        child: const Icon(Icons.chat_bubble, color: Colors.white),
+        onPressed: _openChat,
+      ),
       body: GestureDetector(
         onHorizontalDragStart: (details) {
           _isDragging = true;
@@ -235,7 +249,7 @@ class _DashboardPageState extends State<DashboardPage> {
             .toList();
 
     final uniqueWeights =
-        _weightProgress.map((e) => e['weight'].toDouble()).toSet().toList()
+        _weightProgress.map((e) => e['weight'] as double).toSet().toList()
           ..sort();
 
     return Padding(
@@ -256,7 +270,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       showTitles: true,
                       interval: 1,
                       getTitlesWidget: (value, _) {
-                        int index = value.toInt();
+                        final index = value.toInt();
                         if (index >= 0 && index < labels.length) {
                           return Padding(
                             padding: const EdgeInsets.only(top: 8.0),
