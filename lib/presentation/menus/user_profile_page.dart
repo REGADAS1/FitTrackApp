@@ -77,6 +77,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // manual sidebar
       body: GestureDetector(
         onHorizontalDragStart: (_) => _draggingSidebar = true,
         onHorizontalDragUpdate: (details) {
@@ -97,7 +98,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
         },
         child: Stack(
           children: [
-            // Gradient background
+            // background gradient
             Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
@@ -108,13 +109,14 @@ class _UserProfilePageState extends State<UserProfilePage> {
               ),
             ),
 
+            // main content
             SafeArea(
               child: Padding(
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // Header: menu icon
+                    // menu button
                     Align(
                       alignment: Alignment.centerLeft,
                       child: IconButton(
@@ -124,21 +126,26 @@ class _UserProfilePageState extends State<UserProfilePage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Profile image
+                    // profile avatar (icon fallback)
                     CircleAvatar(
                       radius: 60,
                       backgroundColor: Colors.white24,
                       backgroundImage:
                           profileImageUrl != null
                               ? NetworkImage(profileImageUrl!)
-                              : const AssetImage(
-                                    'assets/images/default_avatar.png',
-                                  )
-                                  as ImageProvider,
+                              : null,
+                      child:
+                          profileImageUrl == null
+                              ? const Icon(
+                                Icons.person,
+                                color: Colors.white,
+                                size: 60,
+                              )
+                              : null,
                     ),
                     const SizedBox(height: 16),
 
-                    // Name (centered)
+                    // name centered
                     Text(
                       '${name ?? ''} ${lastname ?? ''}'.trim(),
                       textAlign: TextAlign.center,
@@ -150,7 +157,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                     ),
                     const SizedBox(height: 30),
 
-                    // Stats row with centered text
+                    // stats row
                     Row(
                       children: [
                         Expanded(
@@ -176,7 +183,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
                     ),
                     const SizedBox(height: 40),
 
-                    // Edit profile button
                     ElevatedButton.icon(
                       onPressed: _editProfile,
                       icon: const Icon(Icons.edit),
@@ -192,7 +198,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Register weight button
                     ElevatedButton.icon(
                       onPressed: _registerWeight,
                       icon: const Icon(Icons.monitor_weight_outlined),
@@ -208,7 +213,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Logout button
                     ElevatedButton.icon(
                       onPressed: _logout,
                       icon: const Icon(Icons.logout),
@@ -227,7 +231,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
               ),
             ),
 
-            // Overlay to close sidebar
+            // overlay to close sidebar
             if (_sidebarXOffset == 0)
               Positioned.fill(
                 child: GestureDetector(
@@ -236,7 +240,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                 ),
               ),
 
-            // Animated sidebar
+            // animated sidebar
             AnimatedPositioned(
               duration: const Duration(milliseconds: 300),
               left: _sidebarXOffset,
