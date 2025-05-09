@@ -1,3 +1,5 @@
+// lib/presentation/menus/dashboard_page.dart
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fit_track_app/presentation/menus/chat_page.dart';
@@ -80,16 +82,13 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // botão flutuante de chat
       floatingActionButton: FloatingActionButton(
         backgroundColor: const Color(0xFF6EC1E4),
         child: const Icon(Icons.chat_bubble, color: Colors.white),
         onPressed: _openChat,
       ),
       body: GestureDetector(
-        onHorizontalDragStart: (details) {
-          _isDragging = true;
-        },
+        onHorizontalDragStart: (_) => _isDragging = true,
         onHorizontalDragUpdate: (details) {
           if (_isDragging) {
             setState(() {
@@ -98,19 +97,15 @@ class _DashboardPageState extends State<DashboardPage> {
             });
           }
         },
-        onHorizontalDragEnd: (details) {
+        onHorizontalDragEnd: (_) {
           _isDragging = false;
           setState(() {
-            if (_sidebarXOffset > -125) {
-              _sidebarXOffset = 0;
-            } else {
-              _sidebarXOffset = -250;
-            }
+            _sidebarXOffset = _sidebarXOffset > -125 ? 0 : -250;
           });
         },
         child: Stack(
           children: [
-            // Conteúdo principal
+            // Fundo gradiente
             Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
@@ -129,27 +124,23 @@ class _DashboardPageState extends State<DashboardPage> {
                       const SizedBox(height: 30),
                       _buildWeightSection(),
                       const SizedBox(height: 20),
-                      SizedBox(height: 160, child: _buildWeightChart()),
+                      SizedBox(height: 180, child: _buildLineChart()),
                     ],
                   ),
                 ),
               ),
             ),
 
-            // Fundo para fechar a sidebar ao clicar fora
+            // Overlay para fechar sidebar
             if (_sidebarXOffset == 0)
               Positioned.fill(
                 child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _sidebarXOffset = -250;
-                    });
-                  },
+                  onTap: () => setState(() => _sidebarXOffset = -250),
                   child: Container(color: Colors.black.withOpacity(0.5)),
                 ),
               ),
 
-            // Sidebar deslizante
+            // Sidebar animada
             AnimatedPositioned(
               duration: const Duration(milliseconds: 300),
               left: _sidebarXOffset,
@@ -157,11 +148,7 @@ class _DashboardPageState extends State<DashboardPage> {
               bottom: 0,
               child: Sidebar(
                 width: 250,
-                onClose: () {
-                  setState(() {
-                    _sidebarXOffset = -250;
-                  });
-                },
+                onClose: () => setState(() => _sidebarXOffset = -250),
               ),
             ),
           ],
@@ -172,8 +159,12 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Widget _buildTopBar() {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
+        IconButton(
+          icon: const Icon(Icons.menu, color: Colors.white),
+          onPressed: () => setState(() => _sidebarXOffset = 0),
+        ),
+        const SizedBox(width: 8),
         Expanded(
           child: Text(
             _name.isNotEmpty ? 'Bem-vindo, $_name' : 'Bem-vindo',
@@ -185,22 +176,21 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
           ),
         ),
-        const SizedBox(width: 10),
         GestureDetector(
-          onTap: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const UserProfilePage()),
-            );
-          },
+          onTap:
+              () => Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const UserProfilePage()),
+              ),
           child: CircleAvatar(
             radius: 28,
             backgroundColor: Colors.white24,
             backgroundImage:
-                _profileImage != null
-                    ? NetworkImage(_profileImage!)
-                    : const AssetImage('assets/images/default_avatar.png')
-                        as ImageProvider,
+                _profileImage != null ? NetworkImage(_profileImage!) : null,
+            child:
+                _profileImage == null
+                    ? const Icon(Icons.person, color: Colors.white, size: 28)
+                    : null,
           ),
         ),
       ],
@@ -221,14 +211,14 @@ class _DashboardPageState extends State<DashboardPage> {
         ),
         SizedBox(height: 6),
         Text(
-          'Acede ao teu perfil e pesa-te diariamente para acompanhares a tua evolução.',
+          'Pese-se diariamente para acompanhar sua evolução.',
           style: TextStyle(color: Colors.white70, fontSize: 13),
         ),
       ],
     );
   }
 
-  Widget _buildWeightChart() {
+  Widget _buildLineChart() {
     if (_weightProgress.isEmpty) {
       return const Center(
         child: Text(
@@ -239,95 +229,72 @@ class _DashboardPageState extends State<DashboardPage> {
     }
 
     final spots =
-        _weightProgress.asMap().entries.map((entry) {
-          return FlSpot(entry.key.toDouble(), entry.value['weight']);
-        }).toList();
-
-    final labels =
         _weightProgress
-            .map((e) => DateFormat('dd/MM').format(e['date']))
+            .asMap()
+            .entries
+            .map((e) => FlSpot(e.key.toDouble(), e.value['weight'] as double))
             .toList();
+    final dates =
+        _weightProgress
+            .map((e) => DateFormat('dd/MM').format(e['date'] as DateTime))
+            .toList();
+    final weights = _weightProgress.map((e) => e['weight'] as double).toList();
+    final maxY = weights.reduce((a, b) => a > b ? a : b) + 2;
 
-    final uniqueWeights =
-        _weightProgress.map((e) => e['weight'] as double).toSet().toList()
-          ..sort();
+    return LineChart(
+      LineChartData(
+        gridData: FlGridData(show: false),
+        borderData: FlBorderData(show: false),
+        minY: 0,
+        maxY: maxY,
 
-    return Padding(
-      padding: const EdgeInsets.only(right: 12.0),
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        children: [
-          SizedBox(
-            width: spots.length * 60,
-            child: LineChart(
-              LineChartData(
-                backgroundColor: Colors.transparent,
-                minY: uniqueWeights.first - 1,
-                maxY: uniqueWeights.last + 1,
-                titlesData: FlTitlesData(
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      interval: 1,
-                      getTitlesWidget: (value, _) {
-                        final index = value.toInt();
-                        if (index >= 0 && index < labels.length) {
-                          return Padding(
-                            padding: const EdgeInsets.only(top: 8.0),
-                            child: Text(
-                              labels[index],
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                              ),
-                            ),
-                          );
-                        }
-                        return const SizedBox.shrink();
-                      },
-                    ),
-                  ),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 36,
-                      getTitlesWidget: (value, _) {
-                        if (uniqueWeights.contains(value)) {
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 4.0),
-                            child: Text(
-                              '${value.toStringAsFixed(1)} kg',
-                              style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 10,
-                              ),
-                            ),
-                          );
-                        }
-                        return const SizedBox.shrink();
-                      },
-                    ),
-                  ),
-                  rightTitles: AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  topTitles: AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                ),
-                gridData: FlGridData(show: false),
-                borderData: FlBorderData(show: false),
-                lineBarsData: [
-                  LineChartBarData(
-                    isCurved: true,
-                    color: const Color(0xFF6EC1E4),
-                    barWidth: 3,
-                    dotData: FlDotData(show: true),
-                    spots: spots,
-                  ),
-                ],
-              ),
+        lineTouchData: LineTouchData(
+          enabled: true,
+          handleBuiltInTouches: true,
+          touchTooltipData: LineTouchTooltipData(
+            // Só mostra "50 kg"
+            getTooltipItems:
+                (spots) =>
+                    spots.map((s) {
+                      return LineTooltipItem(
+                        '${s.y.toStringAsFixed(1)} kg',
+                        const TextStyle(color: Colors.white),
+                      );
+                    }).toList(),
+          ),
+        ),
+
+        titlesData: FlTitlesData(
+          // remove eixo Y
+          leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          // eixo X só com data
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              interval: 1,
+              getTitlesWidget: (value, _) {
+                final idx = value.toInt();
+                if (idx >= 0 && idx < dates.length) {
+                  return Text(
+                    dates[idx],
+                    style: const TextStyle(color: Colors.white, fontSize: 10),
+                  );
+                }
+                return const SizedBox.shrink();
+              },
             ),
+          ),
+        ),
+
+        lineBarsData: [
+          LineChartBarData(
+            spots: spots,
+            isCurved: true,
+            barWidth: 3,
+            color: const Color(0xFF6EC1E4),
+            dotData: FlDotData(show: true),
           ),
         ],
       ),

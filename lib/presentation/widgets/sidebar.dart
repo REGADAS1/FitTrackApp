@@ -1,8 +1,11 @@
+// lib/presentation/widgets/sidebar.dart
+
 import 'package:fit_track_app/presentation/menus/chat_page.dart';
 import 'package:fit_track_app/presentation/menus/dashboard_page.dart';
+import 'package:fit_track_app/presentation/menus/feed_page.dart';
 import 'package:fit_track_app/presentation/menus/training_plans.dart';
-import 'package:flutter/material.dart';
 import 'package:fit_track_app/presentation/menus/user_profile_page.dart';
+import 'package:flutter/material.dart';
 
 class Sidebar extends StatelessWidget {
   final double width;
@@ -26,7 +29,7 @@ class Sidebar extends StatelessWidget {
         children: [
           const SizedBox(height: 60),
 
-          // Opção: Início (exemplo de item que só fecha o menu)
+          // Início
           ListTile(
             leading: const Icon(Icons.home, color: Colors.white),
             title: const Text('Início', style: TextStyle(color: Colors.white)),
@@ -38,7 +41,19 @@ class Sidebar extends StatelessWidget {
             },
           ),
 
-          // Opção: Perfil (navega para UserProfilePage)
+          // Feed
+          ListTile(
+            leading: const Icon(Icons.rss_feed, color: Colors.white),
+            title: const Text('Feed', style: TextStyle(color: Colors.white)),
+            onTap: () {
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const FeedPage()));
+              onClose();
+            },
+          ),
+
+          // Perfil
           ListTile(
             leading: const Icon(Icons.person, color: Colors.white),
             title: const Text('Perfil', style: TextStyle(color: Colors.white)),
@@ -50,9 +65,9 @@ class Sidebar extends StatelessWidget {
             },
           ),
 
-          // Opção: Definições
+          // Planos de Treino
           ListTile(
-            leading: const Icon(Icons.settings, color: Colors.white),
+            leading: const Icon(Icons.fitness_center, color: Colors.white),
             title: const Text(
               'Planos de Treino',
               style: TextStyle(color: Colors.white),
@@ -65,9 +80,9 @@ class Sidebar extends StatelessWidget {
             },
           ),
 
-          // Opção: Definições
+          // Chat
           ListTile(
-            leading: const Icon(Icons.settings, color: Colors.white),
+            leading: const Icon(Icons.chat, color: Colors.white),
             title: const Text('Chat', style: TextStyle(color: Colors.white)),
             onTap: () {
               Navigator.of(
@@ -79,7 +94,7 @@ class Sidebar extends StatelessWidget {
 
           const Spacer(),
 
-          // Botão de Fechar (opcional)
+          // Fechar menu
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: TextButton.icon(
