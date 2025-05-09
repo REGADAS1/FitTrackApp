@@ -1,3 +1,5 @@
+// lib/presentation/chat/chat_page.dart
+
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -303,7 +305,7 @@ class _ChatPageState extends State<ChatPage> {
       key: _scaffoldKey,
       body: Stack(
         children: [
-          // 2) Conteúdo principal
+          // Conteúdo principal
           SafeArea(
             child: Column(
               children: [
@@ -383,6 +385,7 @@ class _ChatPageState extends State<ChatPage> {
                                 );
                               }
                               final docs = snap.data!.docs;
+                              // marca visto...
                               for (var d in docs) {
                                 final dat = d.data()! as Map<String, dynamic>;
                                 final seen = List<String>.from(
@@ -637,34 +640,35 @@ class _ChatPageState extends State<ChatPage> {
             ),
           ),
 
-          // 1) Hot‐spot aumentado para abrir a sidebar 80px
-          Positioned(
-            left: 0,
-            top: 0,
-            bottom: 0,
-            width: 80,
-            child: GestureDetector(
-              behavior: HitTestBehavior.translucent,
-              onTap: () => setState(() => _sidebarXOffset = 0),
-              onHorizontalDragStart: (_) => _draggingSidebar = true,
-              onHorizontalDragUpdate: (d) {
-                if (_draggingSidebar) {
+          // Hot‐spot para abrir a sidebar (apenas quando FECHADA)
+          if (_sidebarXOffset != 0)
+            Positioned(
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: 80,
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onTap: () => setState(() => _sidebarXOffset = 0),
+                onHorizontalDragStart: (_) => _draggingSidebar = true,
+                onHorizontalDragUpdate: (d) {
+                  if (_draggingSidebar) {
+                    setState(() {
+                      _sidebarXOffset = (_sidebarXOffset + d.delta.dx).clamp(
+                        -250,
+                        0,
+                      );
+                    });
+                  }
+                },
+                onHorizontalDragEnd: (_) {
                   setState(() {
-                    _sidebarXOffset = (_sidebarXOffset + d.delta.dx).clamp(
-                      -250,
-                      0,
-                    );
+                    _sidebarXOffset = _sidebarXOffset > -125 ? 0 : -250;
                   });
-                }
-              },
-              onHorizontalDragEnd: (_) {
-                setState(() {
-                  _sidebarXOffset = _sidebarXOffset > -125 ? 0 : -250;
-                });
-                _draggingSidebar = false;
-              },
+                  _draggingSidebar = false;
+                },
+              ),
             ),
-          ),
         ],
       ),
 
