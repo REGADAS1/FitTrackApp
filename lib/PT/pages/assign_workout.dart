@@ -1,3 +1,5 @@
+// lib/presentation/menus/assign_workout_page.dart
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -54,174 +56,319 @@ class _AssignWorkoutPageState extends State<AssignWorkoutPage> {
   }
 
   Future<void> _assignPlanWithDialog() async {
-    showDialog(
+    if (selectedExercises.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Adicione ao menos um exercício ao plano'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    await showDialog(
       context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setStateModal) {
-            return AlertDialog(
-              backgroundColor: const Color(0xFF1E1E1E),
-              title: const Text(
-                'Guardar Plano',
-                style: TextStyle(color: Colors.white),
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: _planNameController,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(
-                      hintText: 'Nome do Plano',
-                      hintStyle: TextStyle(color: Colors.white54),
-                      filled: true,
-                      fillColor: Color(0xFF2C2C2C),
-                    ),
+      builder:
+          (ctx) => StatefulBuilder(
+            builder: (ctx2, setModal) {
+              return AlertDialog(
+                backgroundColor: const Color(0xFF1E1E1E),
+                title: const Text(
+                  'Guardar Plano',
+                  style: TextStyle(color: Colors.white),
+                ),
+                content: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      TextField(
+                        controller: _planNameController,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: const InputDecoration(
+                          hintText: 'Nome do Plano',
+                          hintStyle: TextStyle(color: Colors.white54),
+                          filled: true,
+                          fillColor: Color(0xFF2C2C2C),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Grupo(s) Muscular(es)',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        children:
+                            muscleGroups.where((g) => g != 'Todos').map((
+                              group,
+                            ) {
+                              final sel = selectedMuscleGroups.contains(group);
+                              return FilterChip(
+                                label: Text(
+                                  group,
+                                  style: const TextStyle(color: Colors.white),
+                                ),
+                                selected: sel,
+                                selectedColor: Colors.green,
+                                backgroundColor: Colors.grey[800],
+                                checkmarkColor: Colors.white,
+                                onSelected: (v) {
+                                  setModal(() {
+                                    if (sel) {
+                                      selectedMuscleGroups.remove(group);
+                                    } else {
+                                      selectedMuscleGroups.add(group);
+                                    }
+                                  });
+                                },
+                              );
+                            }).toList(),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                  const Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Grupo(s) Muscular(es)',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    style: TextButton.styleFrom(
+                      backgroundColor: Colors.white10,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 10,
                       ),
                     ),
+                    child: const Text(
+                      'Cancelar',
+                      style: TextStyle(color: Colors.white),
+                    ),
                   ),
-                  const SizedBox(height: 8),
-                  ...muscleGroups.where((g) => g != 'Todos').map((group) {
-                    final isSelected = selectedMuscleGroups.contains(group);
-                    return GestureDetector(
-                      onTap: () {
-                        setStateModal(() {
-                          setState(() {
-                            if (isSelected) {
-                              selectedMuscleGroups.remove(group);
+                  ElevatedButton(
+                    onPressed: () async {
+                      final name = _planNameController.text.trim();
+                      if (name.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Insira o nome do plano'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+                      if (selectedMuscleGroups.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Selecione ao menos um grupo muscular',
+                            ),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+
+                      // Monta a lista de exercícios para salvar
+                      final planExercises =
+                          selectedExercises.map((ex) {
+                            if (ex['usePyramid'] as bool) {
+                              // Pirâmide
+                              final pyramid =
+                                  (ex['pyramid'] as List<Map<String, dynamic>>)
+                                      .map(
+                                        (p) => {
+                                          'weight': p['weight'],
+                                          'reps': p['reps'],
+                                        },
+                                      )
+                                      .toList();
+                              return {
+                                'name': ex['name'],
+                                'muscleGroup': ex['muscleGroup'],
+                                'pyramid': pyramid,
+                              };
                             } else {
-                              selectedMuscleGroups.add(group);
+                              // Séries x reps
+                              return {
+                                'name': ex['name'],
+                                'muscleGroup': ex['muscleGroup'],
+                                'sets': ex['sets'],
+                                'reps': ex['reps'],
+                              };
                             }
-                          });
-                        });
-                      },
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 20,
-                            height: 20,
-                            margin: const EdgeInsets.only(
-                              right: 10,
-                              top: 6,
-                              bottom: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: Colors.white),
-                              color:
-                                  isSelected
-                                      ? Colors.green
-                                      : Colors.transparent,
-                            ),
-                            child:
-                                isSelected
-                                    ? const Icon(
-                                      Icons.check,
-                                      size: 16,
-                                      color: Colors.white,
-                                    )
-                                    : null,
-                          ),
-                          Text(
-                            group,
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: TextButton.styleFrom(
-                    backgroundColor: Colors.white10,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 10,
-                    ),
-                  ),
-                  child: const Text(
-                    'Cancelar',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed: () async {
-                    final name = _planNameController.text.trim();
-                    if (name.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Insira o nome do plano'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                      return;
-                    }
-                    if (selectedMuscleGroups.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Selecione o(s) grupo(s) muscular(es)'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                      return;
-                    }
+                          }).toList();
 
-                    final exerciseNames =
-                        selectedExercises.map((e) => e['name']).toList();
-
-                    await FirebaseFirestore.instance
-                        .collection('users')
-                        .doc(widget.userId)
-                        .set({
-                          'plan': {
-                            name: {
-                              'muscleGroups': selectedMuscleGroups,
-                              'exercises': exerciseNames,
+                      // Salva no Firestore
+                      await FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(widget.userId)
+                          .set({
+                            'plans': {
+                              name: {
+                                'muscleGroups': selectedMuscleGroups,
+                                'exercises': planExercises,
+                                'assignedAt': FieldValue.serverTimestamp(),
+                              },
                             },
-                          },
-                        }, SetOptions(merge: true));
+                          }, SetOptions(merge: true));
 
-                    Navigator.pop(context);
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Plano atribuído com sucesso!'),
-                        backgroundColor: Colors.green,
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Plano atribuído com sucesso!'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueAccent,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 10,
                       ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blueAccent,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 10,
+                    ),
+                    child: const Text('Guardar'),
+                  ),
+                ],
+              );
+            },
+          ),
+    );
+  }
+
+  Future<void> _configurePyramid(
+    BuildContext context,
+    Map<String, dynamic> ex,
+  ) async {
+    // Cria uma cópia profunda para editar sem sobrescrever antes de confirmar
+    final pyramid =
+        ex['pyramid'] != null
+            ? (ex['pyramid'] as List)
+                .map((m) => Map<String, dynamic>.from(m))
+                .toList()
+            : <Map<String, dynamic>>[];
+
+    await showDialog(
+      context: context,
+      builder:
+          (ctx) => StatefulBuilder(
+            builder: (ctx2, setModal) {
+              return AlertDialog(
+                backgroundColor: const Color(0xFF1E1E1E),
+                title: const Text(
+                  'Configurar Pirâmide',
+                  style: TextStyle(color: Colors.white),
+                ),
+                content: SizedBox(
+                  width: double.maxFinite,
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: pyramid.length + 1,
+                    itemBuilder: (c, idx) {
+                      if (idx == pyramid.length) {
+                        return TextButton.icon(
+                          icon: const Icon(Icons.add, color: Colors.white70),
+                          label: const Text(
+                            'Adicionar Série',
+                            style: TextStyle(color: Colors.white70),
+                          ),
+                          onPressed:
+                              () => setModal(() {
+                                pyramid.add({'weight': 0, 'reps': 0});
+                              }),
+                        );
+                      }
+                      final row = pyramid[idx];
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          children: [
+                            // Carga
+                            Expanded(
+                              child: TextField(
+                                keyboardType: TextInputType.number,
+                                decoration: const InputDecoration(
+                                  hintText: 'Kg',
+                                  hintStyle: TextStyle(color: Colors.white54),
+                                  filled: true,
+                                  fillColor: Color(0xFF2C2C2C),
+                                ),
+                                style: const TextStyle(color: Colors.white),
+                                onChanged:
+                                    (v) => row['weight'] = int.tryParse(v) ?? 0,
+                                controller: TextEditingController(
+                                  text: row['weight']?.toString(),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            // Reps
+                            Expanded(
+                              child: TextField(
+                                keyboardType: TextInputType.number,
+                                decoration: const InputDecoration(
+                                  hintText: 'Reps',
+                                  hintStyle: TextStyle(color: Colors.white54),
+                                  filled: true,
+                                  fillColor: Color(0xFF2C2C2C),
+                                ),
+                                style: const TextStyle(color: Colors.white),
+                                onChanged:
+                                    (v) => row['reps'] = int.tryParse(v) ?? 0,
+                                controller: TextEditingController(
+                                  text: row['reps']?.toString(),
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.delete,
+                                color: Colors.redAccent,
+                              ),
+                              onPressed:
+                                  () => setModal(() {
+                                    pyramid.removeAt(idx);
+                                  }),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text(
+                      'Cancelar',
+                      style: TextStyle(color: Colors.white),
                     ),
                   ),
-                  child: const Text('Guardar'),
-                ),
-              ],
-            );
-          },
-        );
-      },
+                  ElevatedButton(
+                    onPressed: () {
+                      // Ao confirmar, grava a pirâmide de volta no exercício
+                      setState(() {
+                        ex['usePyramid'] = true;
+                        ex['pyramid'] = pyramid;
+                      });
+                      Navigator.pop(ctx);
+                    },
+                    child: const Text('OK'),
+                  ),
+                ],
+              );
+            },
+          ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final availableExercises =
+    final available =
         allExercises
             .where((e) => !selectedExercises.any((sel) => sel['id'] == e['id']))
             .where(
@@ -235,30 +382,27 @@ class _AssignWorkoutPageState extends State<AssignWorkoutPage> {
       backgroundColor: const Color(0xFF121212),
       appBar: AppBar(
         title: Text('Plano de ${widget.userName}'),
+        backgroundColor: const Color(0xFF1E1E1E),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: ElevatedButton.icon(
-              onPressed: _assignPlanWithDialog,
-              icon: const Icon(Icons.save),
-              label: const Text('Guardar Plano'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
-              ),
+          TextButton.icon(
+            onPressed: _assignPlanWithDialog,
+            icon: const Icon(Icons.save, color: Colors.white),
+            label: const Text(
+              'Salvar Plano',
+              style: TextStyle(color: Colors.white),
             ),
           ),
         ],
       ),
       body: Row(
         children: [
-          // Exercícios disponíveis
+          // Coluna de exercícios disponíveis
           Expanded(
             child: Container(
               color: const Color(0xFF1A1A1A),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Filtro de grupo
                   Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: Row(
@@ -266,9 +410,8 @@ class _AssignWorkoutPageState extends State<AssignWorkoutPage> {
                         const Text(
                           'Exercícios Disponíveis',
                           style: TextStyle(
-                            fontWeight: FontWeight.bold,
                             color: Colors.white,
-                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -277,17 +420,16 @@ class _AssignWorkoutPageState extends State<AssignWorkoutPage> {
                           dropdownColor: const Color(0xFF2C2C2C),
                           style: const TextStyle(color: Colors.white),
                           iconEnabledColor: Colors.white,
-                          onChanged: (value) {
-                            if (value != null) {
-                              setState(() => selectedGroupFilter = value);
-                            }
+                          onChanged: (v) {
+                            if (v != null)
+                              setState(() => selectedGroupFilter = v);
                           },
                           items:
                               muscleGroups
                                   .map(
-                                    (group) => DropdownMenuItem(
-                                      value: group,
-                                      child: Text(group),
+                                    (g) => DropdownMenuItem(
+                                      value: g,
+                                      child: Text(g),
                                     ),
                                   )
                                   .toList(),
@@ -297,17 +439,23 @@ class _AssignWorkoutPageState extends State<AssignWorkoutPage> {
                   ),
                   Expanded(
                     child: ListView.builder(
-                      itemCount: availableExercises.length,
-                      itemBuilder: (context, index) {
-                        final exercise = availableExercises[index];
+                      itemCount: available.length,
+                      itemBuilder: (ctx, i) {
+                        final ex = available[i];
                         return Draggable<Map<String, dynamic>>(
-                          data: exercise,
+                          data: {
+                            ...ex,
+                            'sets': 3,
+                            'reps': 10,
+                            'usePyramid': false,
+                            'pyramid': <Map<String, dynamic>>[],
+                          },
                           feedback: Material(
                             color: Colors.transparent,
-                            child: _dragPreview(exercise),
+                            child: _dragPreview(ex),
                           ),
                           childWhenDragging: const SizedBox.shrink(),
-                          child: _exerciseTile(exercise),
+                          child: _exerciseTile(ex),
                         );
                       },
                     ),
@@ -317,76 +465,207 @@ class _AssignWorkoutPageState extends State<AssignWorkoutPage> {
             ),
           ),
 
-          // Plano de treino
+          // Coluna do plano de treino
           Expanded(
-            child: DragTarget<Map<String, dynamic>>(
-              onAccept: (exercise) {
-                if (!selectedExercises.any((e) => e['id'] == exercise['id'])) {
-                  setState(() {
-                    selectedExercises.add(exercise);
-                  });
-                }
-              },
-              builder:
-                  (context, candidateData, rejectedData) => Container(
-                    color: const Color(0xFF2C2C2C),
-                    child: Column(
-                      children: [
-                        const Padding(
-                          padding: EdgeInsets.all(8.0),
-                          child: Text(
-                            'Plano de Treino',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              fontSize: 18,
+            child: Container(
+              color: const Color(0xFF2C2C2C),
+              child: Column(
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.all(12.0),
+                    child: Text(
+                      'Plano de Treino',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: DragTarget<Map<String, dynamic>>(
+                      onAccept: (ex) {
+                        setState(() => selectedExercises.add(Map.of(ex)));
+                      },
+                      builder: (ctx, _, __) {
+                        if (selectedExercises.isEmpty) {
+                          return const Center(
+                            child: Text(
+                              'Arraste exercícios para cá',
+                              style: TextStyle(color: Colors.white54),
                             ),
-                          ),
-                        ),
-                        Expanded(
-                          child:
-                              selectedExercises.isEmpty
-                                  ? const Center(
-                                    child: Text(
-                                      'Arraste exercícios para aqui',
-                                      style: TextStyle(color: Colors.white54),
-                                    ),
-                                  )
-                                  : ListView.builder(
-                                    itemCount: selectedExercises.length,
-                                    itemBuilder: (context, index) {
-                                      final exercise = selectedExercises[index];
-                                      return ListTile(
-                                        title: Text(
-                                          exercise['name'],
+                          );
+                        }
+                        return ListView.builder(
+                          itemCount: selectedExercises.length,
+                          itemBuilder: (ctx, i) {
+                            final ex = selectedExercises[i];
+                            return Card(
+                              color: const Color(0xFF333333),
+                              margin: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(8),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Cabeçalho com nome e excluir
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          ex['name'],
                                           style: const TextStyle(
                                             color: Colors.white,
                                           ),
                                         ),
-                                        subtitle: Text(
-                                          exercise['muscleGroup'],
-                                          style: const TextStyle(
-                                            color: Colors.white70,
-                                          ),
-                                        ),
-                                        trailing: IconButton(
+                                        IconButton(
                                           icon: const Icon(
                                             Icons.delete,
                                             color: Colors.redAccent,
                                           ),
                                           onPressed: () {
-                                            setState(() {
-                                              selectedExercises.removeAt(index);
-                                            });
+                                            setState(
+                                              () =>
+                                                  selectedExercises.removeAt(i),
+                                            );
                                           },
                                         ),
-                                      );
-                                    },
-                                  ),
-                        ),
-                      ],
+                                      ],
+                                    ),
+
+                                    // Opção pirâmide
+                                    Row(
+                                      children: [
+                                        Checkbox(
+                                          value: ex['usePyramid'] as bool,
+                                          onChanged: (v) {
+                                            setState(
+                                              () => ex['usePyramid'] = v!,
+                                            );
+                                          },
+                                          activeColor: Colors.blueAccent,
+                                        ),
+                                        const Text(
+                                          'Pirâmide',
+                                          style: TextStyle(
+                                            color: Colors.white70,
+                                          ),
+                                        ),
+                                        const Spacer(),
+                                      ],
+                                    ),
+
+                                    // Séries/Reps ou botão configurar pirâmide
+                                    if (!(ex['usePyramid'] as bool)) ...[
+                                      Row(
+                                        children: [
+                                          const Text(
+                                            'Séries:',
+                                            style: TextStyle(
+                                              color: Colors.white70,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          DropdownButton<int>(
+                                            dropdownColor: const Color(
+                                              0xFF2C2C2C,
+                                            ),
+                                            value: ex['sets'] as int,
+                                            items:
+                                                List.generate(10, (j) => j + 1)
+                                                    .map(
+                                                      (v) => DropdownMenuItem(
+                                                        value: v,
+                                                        child: Text(
+                                                          v.toString(),
+                                                          style:
+                                                              const TextStyle(
+                                                                color:
+                                                                    Colors
+                                                                        .white,
+                                                              ),
+                                                        ),
+                                                      ),
+                                                    )
+                                                    .toList(),
+                                            onChanged:
+                                                (v) => setState(
+                                                  () => ex['sets'] = v!,
+                                                ),
+                                          ),
+                                          const SizedBox(width: 16),
+                                          const Text(
+                                            'Reps:',
+                                            style: TextStyle(
+                                              color: Colors.white70,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          DropdownButton<int>(
+                                            dropdownColor: const Color(
+                                              0xFF2C2C2C,
+                                            ),
+                                            value: ex['reps'] as int,
+                                            items:
+                                                List.generate(30, (j) => j + 1)
+                                                    .map(
+                                                      (v) => DropdownMenuItem(
+                                                        value: v,
+                                                        child: Text(
+                                                          v.toString(),
+                                                          style:
+                                                              const TextStyle(
+                                                                color:
+                                                                    Colors
+                                                                        .white,
+                                                              ),
+                                                        ),
+                                                      ),
+                                                    )
+                                                    .toList(),
+                                            onChanged:
+                                                (v) => setState(
+                                                  () => ex['reps'] = v!,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                    ] else ...[
+                                      Align(
+                                        alignment: Alignment.centerRight,
+                                        child: TextButton.icon(
+                                          onPressed:
+                                              () => _configurePyramid(
+                                                context,
+                                                ex,
+                                              ),
+                                          icon: const Icon(
+                                            Icons.edit,
+                                            color: Colors.white70,
+                                          ),
+                                          label: const Text(
+                                            'Configurar Pirâmide',
+                                            style: TextStyle(
+                                              color: Colors.white70,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
                     ),
                   ),
+                ],
+              ),
             ),
           ),
         ],
@@ -394,34 +673,28 @@ class _AssignWorkoutPageState extends State<AssignWorkoutPage> {
     );
   }
 
-  Widget _exerciseTile(Map<String, dynamic> exercise) {
+  Widget _exerciseTile(Map<String, dynamic> e) {
     return Card(
       color: const Color(0xFF333333),
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: ListTile(
-        title: Text(
-          exercise['name'],
-          style: const TextStyle(color: Colors.white),
-        ),
+        title: Text(e['name'], style: const TextStyle(color: Colors.white)),
         subtitle: Text(
-          exercise['muscleGroup'],
+          e['muscleGroup'],
           style: const TextStyle(color: Colors.white60),
         ),
       ),
     );
   }
 
-  Widget _dragPreview(Map<String, dynamic> exercise) {
+  Widget _dragPreview(Map<String, dynamic> e) {
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: Colors.blueAccent,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Text(
-        exercise['name'],
-        style: const TextStyle(color: Colors.white),
-      ),
+      child: Text(e['name'], style: const TextStyle(color: Colors.white)),
     );
   }
 }

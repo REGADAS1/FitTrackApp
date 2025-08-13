@@ -1,11 +1,12 @@
 // lib/widgets/pt_sidebar.dart
 
 import 'package:fit_track_app/PT/pages/calendar.dart';
-import 'package:flutter/material.dart';
-import 'package:fit_track_app/data/core/configs/theme/assets/app_images.dart';
-import 'package:fit_track_app/PT/pages/pt_dashboard.dart';
 import 'package:fit_track_app/PT/pages/exercise_list.dart';
 import 'package:fit_track_app/PT/pages/pt_chat_page.dart';
+import 'package:fit_track_app/PT/pages/pt_dashboard.dart';
+import 'package:fit_track_app/PT/pages/pt_feed_page.dart'; // <-- import do FeedPage
+import 'package:flutter/material.dart';
+import 'package:fit_track_app/data/core/configs/theme/assets/app_images.dart';
 
 class PTSidebar extends StatelessWidget {
   final String currentRoute;
@@ -31,6 +32,7 @@ class PTSidebar extends StatelessWidget {
               ),
             ),
           ),
+
           _buildMenuItem(
             context,
             icon: Icons.dashboard,
@@ -38,14 +40,16 @@ class PTSidebar extends StatelessWidget {
             route: '/',
             destination: const PTDashboardPage(),
           ),
+
           _buildMenuItem(
             context,
             icon: Icons.people,
             label: 'Alunos',
             route: '/alunos',
             destination:
-                const PTDashboardPage(), // substitui se tiveres outra página
+                const PTDashboardPage(), // substitui se tiveres página de alunos
           ),
+
           _buildMenuItem(
             context,
             icon: Icons.fitness_center,
@@ -53,6 +57,7 @@ class PTSidebar extends StatelessWidget {
             route: '/exercicios',
             destination: const ExerciseListPage(),
           ),
+
           _buildMenuItem(
             context,
             icon: Icons.calendar_today,
@@ -60,12 +65,41 @@ class PTSidebar extends StatelessWidget {
             route: '/calendar',
             destination: const CalendarPage(),
           ),
+
+          // NOVO ITEM: Feed
+          _buildMenuItem(
+            context,
+            icon: Icons.dynamic_feed,
+            label: 'Feed',
+            route: '/feed',
+            destination: const FeedPage(),
+          ),
+
           _buildMenuItem(
             context,
             icon: Icons.chat,
             label: 'Chat',
             route: '/chat',
             destination: const PTChatPage(),
+          ),
+
+          const Spacer(),
+
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: TextButton.icon(
+              onPressed: () => Navigator.pop(context),
+              icon: const Icon(
+                Icons.arrow_back_ios,
+                color: Colors.white70,
+                size: 16,
+              ),
+              label: const Text(
+                'Fechar menu',
+                style: TextStyle(color: Colors.white70),
+              ),
+              style: TextButton.styleFrom(foregroundColor: Colors.white),
+            ),
           ),
         ],
       ),

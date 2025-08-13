@@ -1,3 +1,5 @@
+// lib/presentation/menus/training_plans_page.dart
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fit_track_app/presentation/widgets/sidebar.dart';
@@ -25,11 +27,8 @@ class _TrainingPlansPageState extends State<TrainingPlansPage> {
 
   Future<void> _loadUserPlans() async {
     final user = FirebaseAuth.instance.currentUser;
-
     if (user == null) {
-      setState(() {
-        _loading = false;
-      });
+      setState(() => _loading = false);
       return;
     }
 
@@ -39,43 +38,35 @@ class _TrainingPlansPageState extends State<TrainingPlansPage> {
             .doc(user.uid)
             .get();
     final userData = doc.data();
-
-    if (userData == null || !userData.containsKey('plan')) {
-      setState(() {
-        _loading = false;
-      });
+    if (userData == null || !userData.containsKey('plans')) {
+      setState(() => _loading = false);
       return;
     }
 
-    final userPlans = userData['plan'] as Map<String, dynamic>?;
-    final String userName =
-        '${userData['firstName'] ?? ''} ${userData['lastName'] ?? ''}';
+    final userPlans = userData['plans'] as Map<String, dynamic>;
+    final userName =
+        '${userData['firstName'] ?? ''} ${userData['lastName'] ?? ''}'.trim();
 
-    if (userPlans != null) {
-      for (var entry in userPlans.entries) {
-        final planName = entry.key;
-        final planData = entry.value;
+    for (var entry in userPlans.entries) {
+      final planName = entry.key;
+      final planData = entry.value as Map<String, dynamic>;
 
-        if (planData is Map<String, dynamic>) {
-          final exercises =
-              (planData['exercises'] as List?)?.cast<String>() ?? [];
-          final muscleGroups =
-              (planData['muscleGroups'] as List?)?.cast<String>() ?? [];
+      // cada exercício veio como Map<String,dynamic>
+      final exercisesData =
+          (planData['exercises'] as List).cast<Map<String, dynamic>>();
 
-          _allPlans.add({
-            'user': userName,
-            'name': planName,
-            'muscleGroups': muscleGroups,
-            'exercises': exercises,
-            'imageUrl': _getImageForGroup(muscleGroups),
-          });
-        }
-      }
+      final muscleGroups = (planData['muscleGroups'] as List).cast<String>();
+
+      _allPlans.add({
+        'user': userName,
+        'name': planName,
+        'muscleGroups': muscleGroups,
+        'exercises': exercisesData,
+        'imageUrl': _getImageForGroup(muscleGroups),
+      });
     }
 
-    setState(() {
-      _loading = false;
-    });
+    setState(() => _loading = false);
   }
 
   String _getImageForGroup(List<String> groups) {
@@ -95,7 +86,7 @@ class _TrainingPlansPageState extends State<TrainingPlansPage> {
     } else if (groups.any((g) => g.toLowerCase().contains('ombros'))) {
       return 'assets/images/shoulder_background.png';
     }
-    return 'assets/images/nvrtap_white.png'; // imagem default
+    return 'assets/images/nvrtap_white.png';
   }
 
   @override
@@ -106,8 +97,10 @@ class _TrainingPlansPageState extends State<TrainingPlansPage> {
         onHorizontalDragUpdate: (details) {
           if (_isDragging) {
             setState(() {
-              _sidebarXOffset += details.delta.dx;
-              _sidebarXOffset = _sidebarXOffset.clamp(-250, 0);
+              _sidebarXOffset = (_sidebarXOffset + details.delta.dx).clamp(
+                -250,
+                0,
+              );
             });
           }
         },
@@ -159,9 +152,9 @@ class _TrainingPlansPageState extends State<TrainingPlansPage> {
                               Expanded(
                                 child: ListView.builder(
                                   itemCount: _allPlans.length,
-                                  itemBuilder: (context, index) {
-                                    return _buildPlanCard(_allPlans[index]);
-                                  },
+                                  itemBuilder:
+                                      (ctx, idx) =>
+                                          _buildPlanCard(_allPlans[idx]),
                                 ),
                               ),
                             ],
@@ -170,20 +163,16 @@ class _TrainingPlansPageState extends State<TrainingPlansPage> {
               ),
             ),
 
-            // Fechar sidebar ao clicar fora
+            // overlay para fechar sidebar
             if (_sidebarXOffset == 0)
               Positioned.fill(
                 child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _sidebarXOffset = -250;
-                    });
-                  },
+                  onTap: () => setState(() => _sidebarXOffset = -250),
                   child: Container(color: Colors.black.withOpacity(0.5)),
                 ),
               ),
 
-            // Sidebar animada
+            // sidebar animada
             AnimatedPositioned(
               duration: const Duration(milliseconds: 300),
               left: _sidebarXOffset,
@@ -191,11 +180,7 @@ class _TrainingPlansPageState extends State<TrainingPlansPage> {
               bottom: 0,
               child: Sidebar(
                 width: 250,
-                onClose: () {
-                  setState(() {
-                    _sidebarXOffset = -250;
-                  });
-                },
+                onClose: () => setState(() => _sidebarXOffset = -250),
               ),
             ),
           ],
@@ -245,16 +230,35 @@ class _TrainingPlansPageState extends State<TrainingPlansPage> {
           ),
         ),
         subtitle: Text(
-          plan['muscleGroups'].join(', '),
+          (plan['muscleGroups'] as List<String>).join(', '),
           style: const TextStyle(color: Colors.white60, fontSize: 14),
         ),
         children:
-            (plan['exercises'] as List<String>).map((exercise) {
+            (plan['exercises'] as List<Map<String, dynamic>>).map((e) {
+              Widget detail;
+              if (e.containsKey('pyramid')) {
+                final pyramid =
+                    (e['pyramid'] as List).cast<Map<String, dynamic>>();
+                final parts = pyramid
+                    .map((p) => '${p['weight']}kg x${p['reps']}')
+                    .join(' / ');
+                detail = Text(
+                  parts,
+                  style: const TextStyle(color: Colors.white70, fontSize: 14),
+                );
+              } else {
+                detail = Text(
+                  '${e['sets']} x ${e['reps']}',
+                  style: const TextStyle(color: Colors.white70, fontSize: 14),
+                );
+              }
+
               return ListTile(
                 title: Text(
-                  exercise,
-                  style: const TextStyle(color: Colors.white70),
+                  e['name'],
+                  style: const TextStyle(color: Colors.white),
                 ),
+                subtitle: detail,
               );
             }).toList(),
       ),

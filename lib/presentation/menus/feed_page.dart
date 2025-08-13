@@ -2,7 +2,6 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:fit_track_app/presentation/menus/chat_page.dart';
 import 'package:fit_track_app/presentation/widgets/sidebar.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -17,9 +16,12 @@ class FeedPage extends StatefulWidget {
 class _FeedPageState extends State<FeedPage> {
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
+
   List<Map<String, dynamic>> _posts = [];
   double _sidebarXOffset = -250;
   bool _dragging = false;
+
+  final _newPostCtrl = TextEditingController();
 
   static const _phrases = [
     "O sucesso é a soma de pequenos esforços repetidos dia após dia.",
@@ -41,120 +43,44 @@ class _FeedPageState extends State<FeedPage> {
             .collection('posts')
             .orderBy('timestamp', descending: true)
             .get();
-    setState(() {
-      _posts =
-          snap.docs.map((d) {
-            final data = d.data();
-            return {
-              'authorName': data['authorName'] as String,
-              'authorPhoto': data['authorPhoto'] as String? ?? '',
-              'content': data['content'] as String,
-              'timestamp': (data['timestamp'] as Timestamp).toDate(),
-            };
-          }).toList();
-    });
+    _posts =
+        snap.docs.map((d) {
+          final data = d.data();
+          return {
+            'authorName': data['authorName'] as String? ?? 'PT',
+            'content': data['content'] as String? ?? '',
+            'timestamp':
+                (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
+          };
+        }).toList();
+    setState(() {});
   }
 
-  Future<void> _createPost() async {
-    final ctrl = TextEditingController();
-    final me = _auth.currentUser!;
-    final userDoc = await _firestore.collection('users').doc(me.uid).get();
-    final userData = userDoc.data()!;
-    await showDialog(
-      context: context,
-      builder:
-          (ctx) => AlertDialog(
-            backgroundColor: const Color(0xFF2C2C2C),
-            title: const Text(
-              "Novo Post",
-              style: TextStyle(color: Colors.white),
-            ),
-            content: TextField(
-              controller: ctrl,
-              maxLines: 4,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
-                hintText: "Escreva algo...",
-                hintStyle: TextStyle(color: Colors.white54),
-                filled: true,
-                fillColor: Color(0xFF1A1A1A),
-                border: OutlineInputBorder(borderSide: BorderSide.none),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text(
-                  "Cancelar",
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
-              TextButton(
-                onPressed: () async {
-                  if (ctrl.text.trim().isEmpty) return;
-                  await _firestore.collection('posts').add({
-                    'authorName':
-                        "${userData['firstName']} ${userData['lastName'] ?? ''}",
-                    'authorPhoto': userData['profilePictureUrl'] ?? '',
-                    'content': ctrl.text.trim(),
-                    'timestamp': FieldValue.serverTimestamp(),
-                  });
-                  Navigator.pop(ctx);
-                  _loadPosts();
-                },
-                child: const Text(
-                  "Publicar",
-                  style: TextStyle(color: Colors.blueAccent),
-                ),
-              ),
-            ],
-          ),
-    );
+  Future<void> _submitPost() async {
+    final text = _newPostCtrl.text.trim();
+    if (text.isEmpty) return;
+    final user = _auth.currentUser!;
+    final userDoc = await _firestore.collection('users').doc(user.uid).get();
+    final name = "${userDoc['firstName']} ${userDoc['lastName'] ?? ''}".trim();
+    await _firestore.collection('posts').add({
+      'authorName': name,
+      'content': text,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+    _newPostCtrl.clear();
+    _loadPosts();
   }
 
   String get _todayPhrase {
     final now = DateTime.now();
-    final dayOfYear = now.difference(DateTime(now.year, 1, 1)).inDays;
-    final idx = dayOfYear % _phrases.length;
+    final idx =
+        now.difference(DateTime(now.year, 1, 1)).inDays % _phrases.length;
     return _phrases[idx];
-  }
-
-  void _openChat() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const ChatPage()),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // botão flutuante de chat
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFF6EC1E4),
-        child: const Icon(Icons.chat_bubble, color: Colors.white),
-        onPressed: _openChat,
-      ),
-      // botão flutuante de criar post
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: BottomAppBar(
-        color: Colors.transparent,
-        elevation: 0,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              FloatingActionButton(
-                mini: true,
-                backgroundColor: Colors.blueAccent,
-                child: const Icon(Icons.create, color: Colors.white),
-                onPressed: _createPost,
-              ),
-            ],
-          ),
-        ),
-      ),
       body: GestureDetector(
         onHorizontalDragStart: (_) => _dragging = true,
         onHorizontalDragUpdate: (d) {
@@ -172,7 +98,7 @@ class _FeedPageState extends State<FeedPage> {
         },
         child: Stack(
           children: [
-            // Fundo gradiente
+            // --- Conteúdo principal ---
             Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
@@ -183,10 +109,15 @@ class _FeedPageState extends State<FeedPage> {
               ),
               child: SafeArea(
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.only(
+                    bottom: 80,
+                    left: 16,
+                    right: 16,
+                    top: 16,
+                  ),
                   child: Column(
                     children: [
-                      // TopBar
+                      // Top Bar
                       Row(
                         children: [
                           IconButton(
@@ -208,7 +139,8 @@ class _FeedPageState extends State<FeedPage> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      // Frase do dia
+
+                      // Frase do Dia
                       Card(
                         color: const Color(0xFF2C2C2C),
                         shape: RoundedRectangleBorder(
@@ -231,12 +163,15 @@ class _FeedPageState extends State<FeedPage> {
                                   ),
                                 ),
                               ),
+                              // Aqui você poderia adicionar botões de reação, ex:
+                              // IconButton(icon: Icon(Icons.thumb_up, color: Colors.white70), onPressed: () {}),
                             ],
                           ),
                         ),
                       ),
                       const SizedBox(height: 20),
-                      // Lista de posts
+
+                      // Lista de Posts
                       Expanded(
                         child:
                             _posts.isEmpty
@@ -266,18 +201,6 @@ class _FeedPageState extends State<FeedPage> {
                                           children: [
                                             Row(
                                               children: [
-                                                CircleAvatar(
-                                                  backgroundColor:
-                                                      Colors.white24,
-                                                  backgroundImage:
-                                                      p['authorPhoto']
-                                                              .isNotEmpty
-                                                          ? NetworkImage(
-                                                            p['authorPhoto'],
-                                                          )
-                                                          : null,
-                                                ),
-                                                const SizedBox(width: 12),
                                                 Expanded(
                                                   child: Text(
                                                     p['authorName'],
@@ -306,6 +229,28 @@ class _FeedPageState extends State<FeedPage> {
                                                 color: Colors.white70,
                                               ),
                                             ),
+                                            const SizedBox(height: 8),
+                                            // Exemplo de reação:
+                                            Row(
+                                              children: [
+                                                IconButton(
+                                                  icon: const Icon(
+                                                    Icons.thumb_up,
+                                                    color: Colors.white70,
+                                                    size: 20,
+                                                  ),
+                                                  onPressed: () {
+                                                    /*TODO: curtir*/
+                                                  },
+                                                ),
+                                                Text(
+                                                  '0',
+                                                  style: const TextStyle(
+                                                    color: Colors.white70,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
                                           ],
                                         ),
                                       ),
@@ -328,7 +273,7 @@ class _FeedPageState extends State<FeedPage> {
                 ),
               ),
 
-            // Sidebar animada
+            // Animated Sidebar
             AnimatedPositioned(
               duration: const Duration(milliseconds: 300),
               left: _sidebarXOffset,
@@ -337,6 +282,50 @@ class _FeedPageState extends State<FeedPage> {
               child: Sidebar(
                 width: 250,
                 onClose: () => setState(() => _sidebarXOffset = -250),
+              ),
+            ),
+
+            // Input Fixo para Novo Post
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Container(
+                color: const Color(0xFF6EC1E4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _newPostCtrl,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          hintText: "Escreva um post...",
+                          hintStyle: const TextStyle(color: Colors.white70),
+                          filled: true,
+                          fillColor: Colors.white24,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 0,
+                          ),
+                        ),
+                        onSubmitted: (_) => _submitPost(),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(Icons.send, color: Colors.white),
+                      onPressed: _submitPost,
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
