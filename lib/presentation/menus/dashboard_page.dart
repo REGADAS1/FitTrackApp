@@ -490,38 +490,55 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget _kpiRow() {
     Widget kpi(String label, String value) => Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
+        height: 100, // altura fixa evita overflow/medidas infinitas
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         decoration: BoxDecoration(
           color: Colors.white.withOpacity(0.06),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center, // centra vertical
+          crossAxisAlignment: CrossAxisAlignment.center, // centra horizontal
           children: [
-            Text(
-              value,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+            // evita overflow com números grandes
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                value,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
             Text(
               label,
-              style: const TextStyle(color: Colors.white70, fontSize: 12),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 12,
+                height: 1.2,
+              ),
             ),
           ],
         ),
       ),
     );
+
     return Row(
+      // <<< IMPORTANTE: não usar CrossAxisAlignment.stretch aqui!
       children: [
-        kpi('Treinos/semana', '$_weeklyWorkouts'),
+        kpi('Treinos da semana', '$_weeklyWorkouts'),
         const SizedBox(width: 10),
         kpi('Minutos', '$_weeklyMinutes'),
         const SizedBox(width: 10),
         kpi(
-          'Peso Δ',
+          'Variação do Peso',
           '${_weeklyWeightDelta >= 0 ? '+' : ''}${_weeklyWeightDelta.toStringAsFixed(1)} kg',
         ),
         const SizedBox(width: 10),
