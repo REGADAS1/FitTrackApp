@@ -1,4 +1,4 @@
-# 💪 NVRTAP – Aplicação de Gestão de Treinos e Alunos
+# NVRTAP – Aplicação de Gestão de Treinos e Alunos
 
 > 📌 Projeto desenvolvido por **Gonçalo Regadas** (🇵🇹 Portugal) como parte de um trabalho pessoal e de portfólio, com foco em criar uma solução funcional para gestão de treinos entre Personal Trainers e alunos.  
 > ⚠️ Este repositório contém apenas o **código-fonte** e não distribui versões compiladas.

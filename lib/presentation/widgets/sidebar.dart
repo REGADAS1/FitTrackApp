@@ -5,6 +5,7 @@ import 'package:fit_track_app/presentation/menus/dashboard_page.dart';
 import 'package:fit_track_app/presentation/menus/feed_page.dart';
 import 'package:fit_track_app/presentation/menus/training_plans.dart';
 import 'package:fit_track_app/presentation/menus/user_profile_page.dart';
+import 'package:fit_track_app/presentation/menus/calendar.dart';
 import 'package:flutter/material.dart';
 
 class Sidebar extends StatelessWidget {
@@ -89,6 +90,20 @@ class Sidebar extends StatelessWidget {
                 context,
               ).push(MaterialPageRoute(builder: (_) => const ChatPage()));
               onClose();
+            },
+          ),
+
+          // dentro da lista de opções da Sidebar:
+          ListTile(
+            leading: const Icon(Icons.calendar_today, color: Colors.white),
+            title: const Text(
+              'Calendário',
+              style: TextStyle(color: Colors.white),
+            ),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const CalendarUserPage()),
+              );
             },
           ),
 
