@@ -20,7 +20,8 @@ class AssignWorkoutPage extends StatefulWidget {
 class _AssignWorkoutPageState extends State<AssignWorkoutPage> {
   List<Map<String, dynamic>> allExercises = [];
   List<Map<String, dynamic>> selectedExercises = [];
-  final List<String> muscleGroups = [
+
+  final List<String> muscleGroups = const [
     'Todos',
     'Pernas',
     'Peito',
@@ -30,6 +31,7 @@ class _AssignWorkoutPageState extends State<AssignWorkoutPage> {
     'Costas',
     'Abdómen',
   ];
+
   String selectedGroupFilter = 'Todos';
   List<String> selectedMuscleGroups = [];
   final TextEditingController _planNameController = TextEditingController();
@@ -40,19 +42,33 @@ class _AssignWorkoutPageState extends State<AssignWorkoutPage> {
     _loadExercises();
   }
 
+  /// Lê exercícios do Firestore com *defaults* para evitar null → String
   Future<void> _loadExercises() async {
     final snapshot =
         await FirebaseFirestore.instance.collection('exercises').get();
-    setState(() {
-      allExercises =
-          snapshot.docs.map((doc) {
-            return {
-              'id': doc.id,
-              'name': doc['name'],
-              'muscleGroup': doc['muscleGroup'],
-            };
-          }).toList();
-    });
+    final list = <Map<String, dynamic>>[];
+
+    for (final doc in snapshot.docs) {
+      final data = doc.data();
+
+      // Leitura segura
+      final rawName = data['name'];
+      final rawGroup = data['muscleGroup'];
+
+      final name =
+          (rawName is String && rawName.trim().isNotEmpty)
+              ? rawName.trim()
+              : '(Sem nome)';
+
+      final group =
+          (rawGroup is String && rawGroup.trim().isNotEmpty)
+              ? rawGroup.trim()
+              : 'Outros';
+
+      list.add({'id': doc.id, 'name': name, 'muscleGroup': group});
+    }
+
+    setState(() => allExercises = list);
   }
 
   Future<void> _assignPlanWithDialog() async {
@@ -175,29 +191,32 @@ class _AssignWorkoutPageState extends State<AssignWorkoutPage> {
                       // Monta a lista de exercícios para salvar
                       final planExercises =
                           selectedExercises.map((ex) {
-                            if (ex['usePyramid'] as bool) {
-                              // Pirâmide
+                            final usePyramid =
+                                (ex['usePyramid'] as bool?) ?? false;
+
+                            if (usePyramid) {
                               final pyramid =
-                                  (ex['pyramid'] as List<Map<String, dynamic>>)
+                                  ((ex['pyramid'] as List?) ?? const [])
                                       .map(
                                         (p) => {
-                                          'weight': p['weight'],
-                                          'reps': p['reps'],
+                                          'weight': (p as Map)['weight'] ?? 0,
+                                          'reps': (p as Map)['reps'] ?? 0,
                                         },
                                       )
                                       .toList();
                               return {
-                                'name': ex['name'],
-                                'muscleGroup': ex['muscleGroup'],
+                                'name': (ex['name'] ?? '(Sem nome)').toString(),
+                                'muscleGroup':
+                                    (ex['muscleGroup'] ?? 'Outros').toString(),
                                 'pyramid': pyramid,
                               };
                             } else {
-                              // Séries x reps
                               return {
-                                'name': ex['name'],
-                                'muscleGroup': ex['muscleGroup'],
-                                'sets': ex['sets'],
-                                'reps': ex['reps'],
+                                'name': (ex['name'] ?? '(Sem nome)').toString(),
+                                'muscleGroup':
+                                    (ex['muscleGroup'] ?? 'Outros').toString(),
+                                'sets': (ex['sets'] as int?) ?? 3,
+                                'reps': (ex['reps'] as int?) ?? 10,
                               };
                             }
                           }).toList();
@@ -216,13 +235,15 @@ class _AssignWorkoutPageState extends State<AssignWorkoutPage> {
                             },
                           }, SetOptions(merge: true));
 
-                      Navigator.pop(ctx);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Plano atribuído com sucesso!'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
+                      if (mounted) {
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Plano atribuído com sucesso!'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      }
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blueAccent,
@@ -244,11 +265,10 @@ class _AssignWorkoutPageState extends State<AssignWorkoutPage> {
     BuildContext context,
     Map<String, dynamic> ex,
   ) async {
-    // Cria uma cópia profunda para editar sem sobrescrever antes de confirmar
     final pyramid =
         ex['pyramid'] != null
             ? (ex['pyramid'] as List)
-                .map((m) => Map<String, dynamic>.from(m))
+                .map((m) => Map<String, dynamic>.from(m as Map))
                 .toList()
             : <Map<String, dynamic>>[];
 
@@ -277,9 +297,9 @@ class _AssignWorkoutPageState extends State<AssignWorkoutPage> {
                             style: TextStyle(color: Colors.white70),
                           ),
                           onPressed:
-                              () => setModal(() {
-                                pyramid.add({'weight': 0, 'reps': 0});
-                              }),
+                              () => setModal(
+                                () => pyramid.add({'weight': 0, 'reps': 0}),
+                              ),
                         );
                       }
                       final row = pyramid[idx];
@@ -287,7 +307,6 @@ class _AssignWorkoutPageState extends State<AssignWorkoutPage> {
                         padding: const EdgeInsets.symmetric(vertical: 4),
                         child: Row(
                           children: [
-                            // Carga
                             Expanded(
                               child: TextField(
                                 keyboardType: TextInputType.number,
@@ -301,12 +320,11 @@ class _AssignWorkoutPageState extends State<AssignWorkoutPage> {
                                 onChanged:
                                     (v) => row['weight'] = int.tryParse(v) ?? 0,
                                 controller: TextEditingController(
-                                  text: row['weight']?.toString(),
+                                  text: (row['weight'] ?? 0).toString(),
                                 ),
                               ),
                             ),
                             const SizedBox(width: 8),
-                            // Reps
                             Expanded(
                               child: TextField(
                                 keyboardType: TextInputType.number,
@@ -320,7 +338,7 @@ class _AssignWorkoutPageState extends State<AssignWorkoutPage> {
                                 onChanged:
                                     (v) => row['reps'] = int.tryParse(v) ?? 0,
                                 controller: TextEditingController(
-                                  text: row['reps']?.toString(),
+                                  text: (row['reps'] ?? 0).toString(),
                                 ),
                               ),
                             ),
@@ -330,9 +348,7 @@ class _AssignWorkoutPageState extends State<AssignWorkoutPage> {
                                 color: Colors.redAccent,
                               ),
                               onPressed:
-                                  () => setModal(() {
-                                    pyramid.removeAt(idx);
-                                  }),
+                                  () => setModal(() => pyramid.removeAt(idx)),
                             ),
                           ],
                         ),
@@ -350,7 +366,6 @@ class _AssignWorkoutPageState extends State<AssignWorkoutPage> {
                   ),
                   ElevatedButton(
                     onPressed: () {
-                      // Ao confirmar, grava a pirâmide de volta no exercício
                       setState(() {
                         ex['usePyramid'] = true;
                         ex['pyramid'] = pyramid;
@@ -374,7 +389,8 @@ class _AssignWorkoutPageState extends State<AssignWorkoutPage> {
             .where(
               (e) =>
                   selectedGroupFilter == 'Todos' ||
-                  e['muscleGroup'] == selectedGroupFilter,
+                  (e['muscleGroup'] as String? ?? '').trim() ==
+                      selectedGroupFilter,
             )
             .toList();
 
@@ -483,9 +499,9 @@ class _AssignWorkoutPageState extends State<AssignWorkoutPage> {
                   ),
                   Expanded(
                     child: DragTarget<Map<String, dynamic>>(
-                      onAccept: (ex) {
-                        setState(() => selectedExercises.add(Map.of(ex)));
-                      },
+                      onAccept:
+                          (ex) =>
+                              setState(() => selectedExercises.add(Map.of(ex))),
                       builder: (ctx, _, __) {
                         if (selectedExercises.isEmpty) {
                           return const Center(
@@ -499,6 +515,8 @@ class _AssignWorkoutPageState extends State<AssignWorkoutPage> {
                           itemCount: selectedExercises.length,
                           itemBuilder: (ctx, i) {
                             final ex = selectedExercises[i];
+                            final usePyramid =
+                                (ex['usePyramid'] as bool?) ?? false;
                             return Card(
                               color: const Color(0xFF333333),
                               margin: const EdgeInsets.symmetric(
@@ -516,7 +534,8 @@ class _AssignWorkoutPageState extends State<AssignWorkoutPage> {
                                           MainAxisAlignment.spaceBetween,
                                       children: [
                                         Text(
-                                          ex['name'],
+                                          (ex['name'] ?? '(Sem nome)')
+                                              .toString(),
                                           style: const TextStyle(
                                             color: Colors.white,
                                           ),
@@ -526,12 +545,11 @@ class _AssignWorkoutPageState extends State<AssignWorkoutPage> {
                                             Icons.delete,
                                             color: Colors.redAccent,
                                           ),
-                                          onPressed: () {
-                                            setState(
-                                              () =>
-                                                  selectedExercises.removeAt(i),
-                                            );
-                                          },
+                                          onPressed:
+                                              () => setState(
+                                                () => selectedExercises
+                                                    .removeAt(i),
+                                              ),
                                         ),
                                       ],
                                     ),
@@ -540,12 +558,13 @@ class _AssignWorkoutPageState extends State<AssignWorkoutPage> {
                                     Row(
                                       children: [
                                         Checkbox(
-                                          value: ex['usePyramid'] as bool,
-                                          onChanged: (v) {
-                                            setState(
-                                              () => ex['usePyramid'] = v!,
-                                            );
-                                          },
+                                          value: usePyramid,
+                                          onChanged:
+                                              (v) => setState(
+                                                () =>
+                                                    ex['usePyramid'] =
+                                                        v ?? false,
+                                              ),
                                           activeColor: Colors.blueAccent,
                                         ),
                                         const Text(
@@ -559,7 +578,7 @@ class _AssignWorkoutPageState extends State<AssignWorkoutPage> {
                                     ),
 
                                     // Séries/Reps ou botão configurar pirâmide
-                                    if (!(ex['usePyramid'] as bool)) ...[
+                                    if (!usePyramid) ...[
                                       Row(
                                         children: [
                                           const Text(
@@ -573,7 +592,7 @@ class _AssignWorkoutPageState extends State<AssignWorkoutPage> {
                                             dropdownColor: const Color(
                                               0xFF2C2C2C,
                                             ),
-                                            value: ex['sets'] as int,
+                                            value: (ex['sets'] as int?) ?? 3,
                                             items:
                                                 List.generate(10, (j) => j + 1)
                                                     .map(
@@ -593,7 +612,7 @@ class _AssignWorkoutPageState extends State<AssignWorkoutPage> {
                                                     .toList(),
                                             onChanged:
                                                 (v) => setState(
-                                                  () => ex['sets'] = v!,
+                                                  () => ex['sets'] = v ?? 3,
                                                 ),
                                           ),
                                           const SizedBox(width: 16),
@@ -608,7 +627,7 @@ class _AssignWorkoutPageState extends State<AssignWorkoutPage> {
                                             dropdownColor: const Color(
                                               0xFF2C2C2C,
                                             ),
-                                            value: ex['reps'] as int,
+                                            value: (ex['reps'] as int?) ?? 10,
                                             items:
                                                 List.generate(30, (j) => j + 1)
                                                     .map(
@@ -628,7 +647,7 @@ class _AssignWorkoutPageState extends State<AssignWorkoutPage> {
                                                     .toList(),
                                             onChanged:
                                                 (v) => setState(
-                                                  () => ex['reps'] = v!,
+                                                  () => ex['reps'] = v ?? 10,
                                                 ),
                                           ),
                                         ],
@@ -678,9 +697,12 @@ class _AssignWorkoutPageState extends State<AssignWorkoutPage> {
       color: const Color(0xFF333333),
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: ListTile(
-        title: Text(e['name'], style: const TextStyle(color: Colors.white)),
+        title: Text(
+          (e['name'] ?? '(Sem nome)').toString(),
+          style: const TextStyle(color: Colors.white),
+        ),
         subtitle: Text(
-          e['muscleGroup'],
+          (e['muscleGroup'] ?? 'Outros').toString(),
           style: const TextStyle(color: Colors.white60),
         ),
       ),
@@ -694,7 +716,10 @@ class _AssignWorkoutPageState extends State<AssignWorkoutPage> {
         color: Colors.blueAccent,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Text(e['name'], style: const TextStyle(color: Colors.white)),
+      child: Text(
+        (e['name'] ?? '(Sem nome)').toString(),
+        style: const TextStyle(color: Colors.white),
+      ),
     );
   }
 }

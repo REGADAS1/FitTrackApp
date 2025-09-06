@@ -1,3 +1,4 @@
+// lib/presentation/menus/exercise_list.dart
 import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fit_track_app/PT/widgets/pt_sidebar.dart';
@@ -22,7 +23,7 @@ class _ExerciseListPageState extends State<ExerciseListPage> {
   String? _selectedGroupFilter;
   bool _showForm = false;
 
-  final List<String> muscleGroups = [
+  final List<String> muscleGroups = const [
     'Pernas',
     'Peito',
     'Bíceps',
@@ -61,6 +62,7 @@ class _ExerciseListPageState extends State<ExerciseListPage> {
         _showForm = false;
       });
 
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Exercício adicionado com sucesso!'),
@@ -68,9 +70,71 @@ class _ExerciseListPageState extends State<ExerciseListPage> {
         ),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Erro ao guardar: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _deleteExercise({
+    required String id,
+    required String? imageUrl,
+    required String name,
+  }) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder:
+          (_) => AlertDialog(
+            backgroundColor: const Color(0xFF2C2C2C),
+            title: const Text(
+              'Eliminar exercício',
+              style: TextStyle(color: Colors.white),
+            ),
+            content: Text(
+              'Queres mesmo eliminar “$name”? Esta ação é irreversível.',
+              style: const TextStyle(color: Colors.white70),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text(
+                  'Cancelar',
+                  style: TextStyle(color: Colors.white70),
+                ),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text(
+                  'Eliminar',
+                  style: TextStyle(color: Colors.redAccent),
+                ),
+              ),
+            ],
+          ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      // Se tiveres public_id do Cloudinary, aqui poderias apagá-la também.
+      await FirebaseFirestore.instance.collection('exercises').doc(id).delete();
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Exercício eliminado.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao eliminar: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -114,23 +178,38 @@ class _ExerciseListPageState extends State<ExerciseListPage> {
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
-            child: StreamBuilder(
+            child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
               stream: query.snapshots(),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                final exercises =
+                final docs =
                     snapshot.data!.docs.where((doc) {
                       if (_selectedGroupFilter == null) return true;
-                      return doc['muscleGroup'] == _selectedGroupFilter;
+                      return (doc.data()['muscleGroup'] as String?) ==
+                          _selectedGroupFilter;
                     }).toList();
 
+                if (docs.isEmpty) {
+                  return const Center(
+                    child: Text(
+                      'Sem exercícios.',
+                      style: TextStyle(color: Colors.white70),
+                    ),
+                  );
+                }
+
                 return ListView.builder(
-                  itemCount: exercises.length,
+                  itemCount: docs.length,
                   itemBuilder: (context, index) {
-                    final data = exercises[index].data();
+                    final doc = docs[index];
+                    final data = doc.data();
+                    final imageUrl = data['imageUrl'] as String?;
+                    final name = (data['name'] as String?) ?? '';
+                    final group = (data['muscleGroup'] as String?) ?? '';
+
                     return Card(
                       color: const Color(0xFF2C2C2C),
                       margin: const EdgeInsets.symmetric(vertical: 8),
@@ -140,23 +219,48 @@ class _ExerciseListPageState extends State<ExerciseListPage> {
                       child: ListTile(
                         leading: ClipRRect(
                           borderRadius: BorderRadius.circular(8),
-                          child: Image.network(
-                            data['imageUrl'],
-                            width: 60,
-                            height: 60,
-                            fit: BoxFit.cover,
-                          ),
+                          child:
+                              imageUrl != null && imageUrl.isNotEmpty
+                                  ? Image.network(
+                                    imageUrl,
+                                    width: 60,
+                                    height: 60,
+                                    fit: BoxFit.cover,
+                                  )
+                                  : Container(
+                                    width: 60,
+                                    height: 60,
+                                    color: Colors.black26,
+                                    alignment: Alignment.center,
+                                    child: const Icon(
+                                      Icons.image_not_supported,
+                                      color: Colors.white38,
+                                    ),
+                                  ),
                         ),
                         title: Text(
-                          data['name'] ?? '',
+                          name,
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         subtitle: Text(
-                          data['muscleGroup'] ?? '',
+                          group,
                           style: const TextStyle(color: Colors.white70),
+                        ),
+                        trailing: IconButton(
+                          tooltip: 'Eliminar',
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            color: Colors.redAccent,
+                          ),
+                          onPressed:
+                              () => _deleteExercise(
+                                id: doc.id,
+                                imageUrl: imageUrl,
+                                name: name.isEmpty ? 'exercício' : name,
+                              ),
                         ),
                       ),
                     );
@@ -165,6 +269,8 @@ class _ExerciseListPageState extends State<ExerciseListPage> {
               },
             ),
           ),
+
+          // ---------- Modal de criação ----------
           if (_showForm)
             Positioned.fill(
               child: GestureDetector(
