@@ -1,3 +1,5 @@
+// lib/PT/pages/pt_dashboard.dart
+
 import 'package:fit_track_app/PT/widgets/pt_sidebar.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -5,6 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'exercise_list.dart';
 import 'assign_workout.dart';
 import 'view_workouts.dart';
+import 'pt_assessments_page.dart';
 
 class PTDashboardPage extends StatefulWidget {
   const PTDashboardPage({super.key});
@@ -37,7 +40,7 @@ class _PTDashboardPageState extends State<PTDashboardPage> {
       drawer: const PTSidebar(currentRoute: '/dashboard'),
       appBar: AppBar(
         backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('Dashboard'),
+        title: const Text('Alunos'),
         leading: Builder(
           builder:
               (context) => IconButton(
@@ -51,7 +54,7 @@ class _PTDashboardPageState extends State<PTDashboardPage> {
         children: [
           Padding(
             padding: const EdgeInsets.all(24),
-            child: StreamBuilder(
+            child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
               stream:
                   FirebaseFirestore.instance.collection('users').snapshots(),
               builder: (context, snapshot) {
@@ -134,6 +137,8 @@ class _PTDashboardPageState extends State<PTDashboardPage> {
               },
             ),
           ),
+
+          // overlay para fechar painel
           if (_showDetailsPanel)
             Positioned.fill(
               child: GestureDetector(
@@ -141,6 +146,8 @@ class _PTDashboardPageState extends State<PTDashboardPage> {
                 child: Container(color: Colors.black.withOpacity(0.4)),
               ),
             ),
+
+          // painel lateral com detalhes do aluno
           AnimatedPositioned(
             duration: const Duration(milliseconds: 300),
             right:
@@ -216,6 +223,7 @@ class _PTDashboardPageState extends State<PTDashboardPage> {
                               style: const TextStyle(color: Colors.white70),
                             ),
                             const SizedBox(height: 20),
+
                             const Text(
                               'Plano de Treino:',
                               style: TextStyle(
@@ -224,6 +232,7 @@ class _PTDashboardPageState extends State<PTDashboardPage> {
                               ),
                             ),
                             const SizedBox(height: 10),
+
                             if ((_selectedUser!['plan'] as Map?)?.isNotEmpty ??
                                 false)
                               ...(_selectedUser!['plan']
@@ -235,7 +244,6 @@ class _PTDashboardPageState extends State<PTDashboardPage> {
                                         (entry.value['exercises'] as List?)
                                             ?.cast<String>() ??
                                         [];
-
                                     return Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
@@ -271,9 +279,13 @@ class _PTDashboardPageState extends State<PTDashboardPage> {
                                 'Nenhum plano atribuído.',
                                 style: TextStyle(color: Colors.white54),
                               ),
+
                             const SizedBox(height: 30),
+
+                            // ---------- AÇÕES ----------
+                            // 1ª linha: Criar Plano + Planos de Treino
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisAlignment: MainAxisAlignment.start,
                               children: [
                                 ElevatedButton.icon(
                                   onPressed: () {
@@ -340,6 +352,44 @@ class _PTDashboardPageState extends State<PTDashboardPage> {
                                 ),
                               ],
                             ),
+
+                            const SizedBox(height: 12),
+
+                            // 2ª linha: Avaliações (alinhado à esquerda)
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: ElevatedButton.icon(
+                                onPressed: () {
+                                  final id = _selectedUser!['id'] as String;
+                                  final name =
+                                      '${_selectedUser!['firstName']} ${_selectedUser!['lastName']}';
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (_) => PTAssessmentsPage(
+                                            userId: id,
+                                            userName: name,
+                                          ),
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.assignment),
+                                label: const Text('Avaliações'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF6EC1E4),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                    vertical: 12,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            // ---------- /AÇÕES ----------
                           ],
                         ),
                       ),

@@ -36,18 +36,9 @@ class PTSidebar extends StatelessWidget {
           _buildMenuItem(
             context,
             icon: Icons.dashboard,
-            label: 'Dashboard',
+            label: 'Alunos',
             route: '/',
             destination: const PTDashboardPage(),
-          ),
-
-          _buildMenuItem(
-            context,
-            icon: Icons.people,
-            label: 'Alunos',
-            route: '/alunos',
-            destination:
-                const PTDashboardPage(), // substitui se tiveres página de alunos
           ),
 
           _buildMenuItem(

@@ -1,11 +1,20 @@
+// lib/PT/main_pt.dart (ou onde tiveres este ficheiro)
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:intl/date_symbol_data_local.dart';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:fit_track_app/firebase_options.dart';
-import 'package:fit_track_app/PT/pages/pt_login.dart'; // <- importa a página de login da PT
+import 'package:fit_track_app/PT/pages/pt_login.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Locale/Intl (precisa disto para DateFormat('...', 'pt_PT'))
+  await initializeDateFormatting('pt_PT', null);
 
   runApp(const PTApp());
 }
@@ -18,6 +27,16 @@ class PTApp extends StatelessWidget {
     return MaterialApp(
       title: 'Painel da Personal Trainer',
       debugShowCheckedModeBanner: false,
+
+      // Locale PT-PT em toda a app
+      locale: const Locale('pt', 'PT'),
+      supportedLocales: const [Locale('pt', 'PT'), Locale('en', 'US')],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+
       theme: ThemeData(
         brightness: Brightness.dark,
         scaffoldBackgroundColor: const Color(0xFF1A1A1A),
@@ -41,7 +60,7 @@ class PTApp extends StatelessWidget {
           bodyMedium: TextStyle(color: Colors.white70),
         ),
       ),
-      home: const PTLoginPage(), // <--- login como página inicial
+      home: const PTLoginPage(),
     );
   }
 }

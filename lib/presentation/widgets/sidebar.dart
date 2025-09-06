@@ -6,6 +6,7 @@ import 'package:fit_track_app/presentation/menus/feed_page.dart';
 import 'package:fit_track_app/presentation/menus/training_plans.dart';
 import 'package:fit_track_app/presentation/menus/user_profile_page.dart';
 import 'package:fit_track_app/presentation/menus/calendar.dart';
+import 'package:fit_track_app/presentation/menus/assessments_user_page.dart';
 import 'package:flutter/material.dart';
 
 class Sidebar extends StatelessWidget {
@@ -51,6 +52,21 @@ class Sidebar extends StatelessWidget {
                 context,
               ).push(MaterialPageRoute(builder: (_) => const FeedPage()));
               onClose();
+            },
+          ),
+
+          // dentro do widget Sidebar, onde listas os itens do menu:
+          ListTile(
+            leading: const Icon(Icons.fact_check, color: Colors.white),
+            title: const Text(
+              'Avaliações',
+              style: TextStyle(color: Colors.white),
+            ),
+            onTap: () {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const AssessmentsUserPage()),
+              );
+              onClose?.call(); // se tiveres este callback
             },
           ),
 
