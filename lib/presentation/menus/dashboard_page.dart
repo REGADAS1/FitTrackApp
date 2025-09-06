@@ -1,10 +1,11 @@
 // lib/presentation/menus/dashboard_page.dart
+import 'dart:math' as math;
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fit_track_app/presentation/menus/chat_page.dart';
 import 'package:fit_track_app/presentation/menus/user_profile_page.dart';
 import 'package:fit_track_app/presentation/widgets/sidebar.dart';
-// import 'package:fit_track_app/presentation/menus/set_training_plan.dart'; // (não usado neste ecrã)
 import 'package:fit_track_app/presentation/menus/cronometer.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -18,32 +19,47 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
+  // --------- Tema / Constantes ----------
+  static const themeBlue = Color(0xFF6EC1E4);
+  static const bgCardOpacity = 0.06;
+
+  // --------- Estado do utilizador ----------
   String _name = '';
   String? _profileImage;
+
+  // Peso (mantido se precisares futuramente)
   List<Map<String, dynamic>> _weightProgress = [];
 
-  // Dashboard extras
+  // KPIs
   int _weeklyWorkouts = 0;
   int _weeklyMinutes = 0;
   double _weeklyWeightDelta = 0.0;
   int _streak = 0;
 
+  // Periodização (fases)
+  List<_Phase> _phases = [];
+  _Phase? _currentPhase;
+
   // Guardar dias com atividade (peso OU treino) para streak instantâneo
   Set<DateTime> _activityDays = {};
 
+  // Sidebar deslizante
   double _sidebarXOffset = -250;
   bool _isDragging = false;
 
   User? get _user => FirebaseAuth.instance.currentUser;
 
+  // --------- Init ----------
   @override
   void initState() {
     super.initState();
     _loadUserData();
     _loadWeightProgress();
     _loadWeeklyStatsAndStreak();
+    _loadPeriodization();
   }
 
+  // --------- Loads ----------
   Future<void> _loadUserData() async {
     final user = _user;
     if (user != null) {
@@ -53,7 +69,7 @@ class _DashboardPageState extends State<DashboardPage> {
               .doc(user.uid)
               .get();
       final data = doc.data();
-      if (data != null) {
+      if (data != null && mounted) {
         setState(() {
           _name = data['firstName'] ?? '';
           _profileImage = data['profilePictureUrl'];
@@ -73,6 +89,7 @@ class _DashboardPageState extends State<DashboardPage> {
               .orderBy('date')
               .get();
 
+      if (!mounted) return;
       setState(() {
         _weightProgress =
             snapshots.docs.map((doc) {
@@ -109,14 +126,14 @@ class _DashboardPageState extends State<DashboardPage> {
       (sum, d) => sum + ((d.data()['durationMin'] ?? 0) as int),
     );
 
-    // weekly weight delta (last weight vs weight ~7-10 dias atrás)
     double delta = 0.0;
     if (_weightProgress.length >= 2) {
       final last = _weightProgress.last['weight'] as double;
+      final nowDay = _startOfDay(now);
       final past =
           _weightProgress.reversed.firstWhere(
                 (e) => (e['date'] as DateTime).isBefore(
-                  _startOfDay(now).subtract(const Duration(days: 5)),
+                  nowDay.subtract(const Duration(days: 5)),
                 ),
                 orElse: () => _weightProgress.first,
               )['weight']
@@ -124,7 +141,6 @@ class _DashboardPageState extends State<DashboardPage> {
       delta = double.parse((last - past).toStringAsFixed(1));
     }
 
-    // streak: dias com peso OU treino
     final doneDays = <DateTime>{};
     for (final w in _weightProgress) {
       doneDays.add(_startOfDay(w['date'] as DateTime));
@@ -134,16 +150,75 @@ class _DashboardPageState extends State<DashboardPage> {
     }
     final streak = _calcStreak(doneDays.toList());
 
-    if (mounted) {
-      setState(() {
-        _weeklyWorkouts = workoutDates.length;
-        _weeklyMinutes = minutes;
-        _weeklyWeightDelta = delta;
-        _streak = streak;
-        _activityDays = doneDays; // manter cache para updates instantâneos
-      });
-    }
+    if (!mounted) return;
+    setState(() {
+      _weeklyWorkouts = workoutDates.length;
+      _weeklyMinutes = minutes;
+      _weeklyWeightDelta = delta; // não exibido
+      _streak = streak;
+      _activityDays = doneDays;
+    });
   }
+
+  Future<void> _loadPeriodization() async {
+    final user = _user;
+    if (user == null) return;
+
+    // ✅ coleção e campos corretos (iguais à PeriodizationPage)
+    final col = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('periodization_phases');
+
+    final snap = await col.orderBy('startDate').get();
+    final now = DateTime.now();
+
+    final phases = <_Phase>[];
+    for (final d in snap.docs) {
+      final data = d.data();
+      final start = (data['startDate'] as Timestamp).toDate();
+      final end = (data['endDate'] as Timestamp).toDate();
+
+      final label =
+          (data['title'] as String?)?.trim().isNotEmpty == true
+              ? data['title'] as String
+              : 'Fase';
+
+      // color guardado como int na PeriodizationPage
+      final colorInt = data['color'] as int?;
+      final color =
+          colorInt != null
+              ? Color(colorInt)
+              : _pickPhaseColor(label, null); // fallback
+
+      phases.add(
+        _Phase(
+          start: _startOfDay(start),
+          end: _startOfDay(end),
+          label: label,
+          color: color,
+        ),
+      );
+    }
+
+    // fase atual (se existir)
+    _Phase? current;
+    for (final p in phases) {
+      if (!now.isBefore(p.start) && !now.isAfter(p.end)) {
+        current = p;
+        break;
+      }
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _phases = phases;
+      _currentPhase = current;
+    });
+  }
+
+  // --------- Utils ----------
+  DateTime _startOfDay(DateTime d) => DateTime(d.year, d.month, d.day);
 
   int _calcStreak(List<DateTime> days) {
     if (days.isEmpty) return 0;
@@ -158,7 +233,18 @@ class _DashboardPageState extends State<DashboardPage> {
     return s;
   }
 
-  DateTime _startOfDay(DateTime d) => DateTime(d.year, d.month, d.day);
+  Color _pickPhaseColor(String label, String? hex) {
+    if (hex != null && hex.trim().isNotEmpty) {
+      final v = int.tryParse(hex.replaceAll('#', ''), radix: 16);
+      if (v != null) return Color(0xFF000000 | v);
+    }
+    final l = label.toLowerCase();
+    if (l.contains('força')) return const Color(0xFFFF9E3D); // laranja
+    if (l.contains('hipertro')) return const Color(0xFFFF6EC7); // rosa
+    if (l.contains('potência')) return const Color(0xFF8E7CFF); // lilás
+    if (l.contains('resist')) return const Color(0xFF4DD0E1); // ciano
+    return const Color(0xFF9E9E9E); // cinza
+  }
 
   void _openChat() {
     Navigator.push(
@@ -167,7 +253,6 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  // --------- Novo: abrir cronómetro e atualizar KPIs no regresso ---------
   Future<void> _openCronometer() async {
     final res = await Navigator.push(
       context,
@@ -175,11 +260,9 @@ class _DashboardPageState extends State<DashboardPage> {
     );
 
     if (res is Map && res['workoutLogged'] == true) {
-      // duração em segundos -> minutos arredondados
       final int durationSec = (res['durationSec'] as int?) ?? 0;
       final int minutesRounded = (durationSec / 60).round();
 
-      // data do treino (ISO) -> dia (startOfDay)
       DateTime loggedAt;
       try {
         loggedAt = DateTime.parse(res['date'] as String);
@@ -188,7 +271,6 @@ class _DashboardPageState extends State<DashboardPage> {
       }
       final day = _startOfDay(loggedAt);
 
-      // rolling window de 7 dias (como o teu query)
       final weekAgo = DateTime.now().subtract(const Duration(days: 7));
       final inLast7Days =
           day.isAfter(_startOfDay(weekAgo)) ||
@@ -199,22 +281,70 @@ class _DashboardPageState extends State<DashboardPage> {
           _weeklyWorkouts += 1;
           _weeklyMinutes += minutesRounded;
         }
-
-        // marcar atividade de hoje e recalcular streak
         _activityDays.add(day);
         _streak = _calcStreak(_activityDays.toList());
       });
-
-      // opcional: sincronizar com Firestore (recarrega estados "oficiais")
-      // await _loadWeeklyStatsAndStreak();
     }
   }
 
+  // --------- Queries de calendário do PT ----------
+  // Evita índice composto: indexa por 'start' e filtra 'userId' em memória.
+
+  Stream<Map<String, dynamic>?> _todayWorkoutFromCalendar() {
+    final uid = _user?.uid;
+    if (uid == null) return const Stream.empty();
+
+    final start = _startOfDay(DateTime.now());
+    final end = start.add(const Duration(days: 1));
+
+    return FirebaseFirestore.instance
+        .collection('availability')
+        .where('start', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+        .where('start', isLessThan: Timestamp.fromDate(end))
+        .orderBy('start', descending: false)
+        .limit(30) // margem de segurança
+        .snapshots()
+        .map((s) {
+          // pega a primeira sessão do próprio utilizador
+          for (final d in s.docs) {
+            final data = d.data();
+            if ((data['userId'] as String?) == uid) {
+              return data;
+            }
+          }
+          return null;
+        });
+  }
+
+  Stream<Map<String, dynamic>?> _nextWorkoutFromCalendar() {
+    final uid = _user?.uid;
+    if (uid == null) return const Stream.empty();
+
+    final now = DateTime.now();
+
+    return FirebaseFirestore.instance
+        .collection('availability')
+        .where('start', isGreaterThan: Timestamp.fromDate(now))
+        .orderBy('start', descending: false)
+        .limit(50)
+        .snapshots()
+        .map((s) {
+          for (final d in s.docs) {
+            final data = d.data();
+            if ((data['userId'] as String?) == uid) {
+              return data;
+            }
+          }
+          return null;
+        });
+  }
+
+  // --------- Build ----------
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFF6EC1E4),
+        backgroundColor: themeBlue,
         child: const Icon(Icons.chat_bubble, color: Colors.white),
         onPressed: _openChat,
       ),
@@ -252,24 +382,40 @@ class _DashboardPageState extends State<DashboardPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildTopBar(),
-                      const SizedBox(height: 30),
-                      _buildWeightSection(),
-                      const SizedBox(height: 20),
-                      SizedBox(height: 180, child: _buildLineChart()),
-                      const SizedBox(height: 16),
-                      _todayWorkoutCard(),
-                      const SizedBox(height: 12),
+
+                      const SizedBox(height: 24),
+
+                      // ===== 1) Hoje e Próximo treino (calendário PT) =====
+                      _sectionTitle('Agenda de treinos'),
+                      const SizedBox(height: 10),
+                      _calendarCardsRow(),
+
+                      const SizedBox(height: 22),
+
+                      // ===== 2) Gráfico de Periodização =====
+                      _sectionTitle('Periodização'),
+                      const SizedBox(height: 6),
+                      _periodizationLegend(),
+                      const SizedBox(height: 10),
+                      SizedBox(height: 200, child: _buildPeriodizationChart()),
+
+                      const SizedBox(height: 22),
+
+                      // ===== 3) KPIs + Ação =====
                       _kpiRow(),
                       const SizedBox(height: 12),
-                      _quickActionsRow(), // Atualizado: usa _openCronometer
-                      const SizedBox(height: 12),
+                      _quickActionsRow(),
+
+                      const SizedBox(height: 22),
+
+                      // ===== 4) Metas do dia =====
                       _dailyGoalsChips(),
+
                       const SizedBox(height: 12),
+
+                      // ===== 5) Hidratação =====
                       _hydrationCounter(),
-                      const SizedBox(height: 12),
-                      _insightOfTheDay(),
-                      const SizedBox(height: 12),
-                      _nextSessionCard(),
+
                       const SizedBox(height: 24),
                     ],
                   ),
@@ -345,166 +491,515 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildWeightSection() {
-    return const Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _sectionTitle(String t) => Text(
+    t,
+    style: const TextStyle(
+      color: Colors.white,
+      fontSize: 18,
+      fontWeight: FontWeight.bold,
+    ),
+  );
+
+  // ---- Agenda (Hoje + Próximo) ----
+  Widget _calendarCardsRow() {
+    return Row(
       children: [
-        Text(
-          'Progresso de Peso',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        SizedBox(height: 6),
-        Text(
-          'Pese-se diariamente para acompanhar a sua evolução.',
-          style: TextStyle(color: Colors.white70, fontSize: 13),
-        ),
+        Expanded(child: _todayWorkoutCardFromPTCalendar()),
+        const SizedBox(width: 12),
+        Expanded(child: _nextWorkoutCardFromPTCalendar()),
       ],
     );
   }
 
-  Widget _buildLineChart() {
-    if (_weightProgress.isEmpty) {
-      return const Center(
-        child: Text(
-          'Sem dados de progresso ainda.',
-          style: TextStyle(color: Colors.white70),
-        ),
-      );
-    }
-
-    final spots =
-        _weightProgress
-            .asMap()
-            .entries
-            .map((e) => FlSpot(e.key.toDouble(), e.value['weight'] as double))
-            .toList();
-    final dates =
-        _weightProgress
-            .map((e) => DateFormat('dd/MM').format(e['date'] as DateTime))
-            .toList();
-    final weights = _weightProgress.map((e) => e['weight'] as double).toList();
-    final maxY = (weights.reduce((a, b) => a > b ? a : b)) + 2;
-
-    return LineChart(
-      LineChartData(
-        gridData: FlGridData(show: false),
-        borderData: FlBorderData(show: false),
-        minY: 0,
-        maxY: maxY,
-        lineTouchData: LineTouchData(
-          enabled: true,
-          handleBuiltInTouches: true,
-          touchTooltipData: LineTouchTooltipData(
-            getTooltipItems:
-                (items) =>
-                    items.map((s) {
-                      return LineTooltipItem(
-                        '${s.y.toStringAsFixed(1)} kg',
-                        const TextStyle(color: Colors.white),
-                      );
-                    }).toList(),
-          ),
-        ),
-        titlesData: FlTitlesData(
-          leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              interval: 1,
-              getTitlesWidget: (value, _) {
-                final idx = value.toInt();
-                if (idx >= 0 && idx < dates.length) {
-                  return Text(
-                    dates[idx],
-                    style: const TextStyle(color: Colors.white, fontSize: 10),
-                  );
-                }
-                return const SizedBox.shrink();
-              },
+  Widget _calendarCard({required String title, required Widget child}) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(bgCardOpacity),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
             ),
           ),
-        ),
-        lineBarsData: [
-          LineChartBarData(
-            spots: spots,
-            isCurved: true,
-            barWidth: 3,
-            color: const Color(0xFF6EC1E4),
-            dotData: FlDotData(show: true),
-          ),
+          const SizedBox(height: 8),
+          child,
         ],
       ),
     );
   }
 
-  // ---------- Cards/Widgets ----------
-  Widget _todayWorkoutCard() {
-    final user = _user;
-    if (user == null) return const SizedBox.shrink();
-
-    final start = _startOfDay(DateTime.now());
-    final end = start.add(const Duration(days: 1));
-
-    final q =
-        FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .collection('assigned_workouts')
-            .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
-            .where('date', isLessThan: Timestamp.fromDate(end))
-            .limit(1)
-            .snapshots();
-
-    return StreamBuilder<QuerySnapshot>(
-      stream: q,
+  Widget _todayWorkoutCardFromPTCalendar() {
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream:
+          FirebaseFirestore.instance
+              .collection('availability')
+              .where(
+                'start',
+                isGreaterThanOrEqualTo: Timestamp.fromDate(
+                  _startOfDay(DateTime.now()),
+                ),
+              )
+              .where(
+                'start',
+                isLessThan: Timestamp.fromDate(
+                  _startOfDay(DateTime.now()).add(const Duration(days: 1)),
+                ),
+              )
+              .orderBy('start')
+              .limit(30)
+              .snapshots(),
       builder: (ctx, snap) {
-        if (snap.connectionState == ConnectionState.waiting) {
-          return _smallInfoCard('Treino de hoje', 'A carregar…');
-        }
-        if (!snap.hasData || snap.data!.docs.isEmpty) {
-          return _smallInfoCard(
-            'Treino de hoje',
-            'Sem sessão marcada. Aproveita para alongar ✨',
+        if (snap.hasError) {
+          return _calendarCard(
+            title: 'Treino de hoje',
+            child: const Text(
+              'Erro a carregar treino de hoje.',
+              style: TextStyle(color: Colors.redAccent),
+            ),
           );
         }
-        final d = snap.data!.docs.first.data() as Map<String, dynamic>;
-        return _actionCard(
-          title: d['title'] ?? 'Treino',
-          subtitle:
-              '${d['exercisesCount'] ?? 0} exercícios • ${d['durationMin'] ?? 0} min',
-          cta: 'Começar',
-          onTap: () {
-            // TODO: navegar para execução do treino específico
-          },
+        if (!snap.hasData) {
+          return _calendarCard(
+            title: 'Treino de hoje',
+            child: const Text(
+              'A carregar…',
+              style: TextStyle(color: Colors.white70),
+            ),
+          );
+        }
+
+        final uid = _user?.uid;
+        final docs = snap.data!.docs;
+        Map<String, dynamic>? data;
+        for (final d in docs) {
+          final m = d.data();
+          if ((m['userId'] as String?) == uid) {
+            data = m;
+            break;
+          }
+        }
+
+        if (data == null) {
+          return _calendarCard(
+            title: 'Treino de hoje',
+            child: const Text(
+              'Sem sessão marcada',
+              style: TextStyle(color: Colors.white70),
+            ),
+          );
+        }
+
+        final start = (data['start'] as Timestamp).toDate();
+        final end = (data['end'] as Timestamp).toDate();
+        final title =
+            (data['title'] as String?)?.trim().isNotEmpty == true
+                ? data['title'] as String
+                : 'Treino';
+        final when =
+            '${DateFormat('HH:mm').format(start)} — ${DateFormat('HH:mm').format(end)}';
+
+        return _calendarCard(
+          title: 'Treino de hoje',
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '$title • $when',
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
         );
       },
     );
   }
 
+  Widget _nextWorkoutCardFromPTCalendar() {
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream:
+          FirebaseFirestore.instance
+              .collection('availability')
+              .where('start', isGreaterThan: Timestamp.fromDate(DateTime.now()))
+              .orderBy('start')
+              .limit(50)
+              .snapshots(),
+      builder: (ctx, snap) {
+        if (snap.hasError) {
+          return _calendarCard(
+            title: 'Próximo treino',
+            child: const Text(
+              'Erro a carregar próximo treino.',
+              style: TextStyle(color: Colors.redAccent),
+            ),
+          );
+        }
+        if (!snap.hasData) {
+          return _calendarCard(
+            title: 'Próximo treino',
+            child: const Text(
+              'A carregar…',
+              style: TextStyle(color: Colors.white70),
+            ),
+          );
+        }
+
+        final uid = _user?.uid;
+        final docs = snap.data!.docs;
+
+        Map<String, dynamic>? data;
+        for (final d in docs) {
+          final m = d.data();
+          if ((m['userId'] as String?) == uid) {
+            data = m;
+            break;
+          }
+        }
+
+        if (data == null) {
+          return _calendarCard(
+            title: 'Próximo treino',
+            child: const Text(
+              'Sem sessões futuras.',
+              style: TextStyle(color: Colors.white70),
+            ),
+          );
+        }
+
+        final start = (data['start'] as Timestamp).toDate();
+        final title =
+            (data['title'] as String?)?.trim().isNotEmpty == true
+                ? data['title'] as String
+                : 'Treino';
+        final when = DateFormat('EEE, dd MMM HH:mm', 'pt_PT').format(start);
+
+        return _calendarCard(
+          title: 'Próximo treino',
+          child: Text(
+            '$title • $when',
+            style: const TextStyle(color: Colors.white),
+          ),
+        );
+      },
+    );
+  }
+
+  // ---- Periodização ----
+  Widget _periodizationLegend() {
+    if (_phases.isEmpty) {
+      return const Text(
+        'Sem fases registadas.',
+        style: TextStyle(color: Colors.white70, fontSize: 13),
+      );
+    }
+    return Wrap(
+      spacing: 8,
+      runSpacing: 6,
+      children:
+          _phases.map((p) {
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 10,
+                  height: 10,
+                  margin: const EdgeInsets.only(right: 6),
+                  decoration: BoxDecoration(
+                    color: p.color,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+                Text(
+                  p.label,
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+              ],
+            );
+          }).toList(),
+    );
+  }
+
+  Widget _buildPeriodizationChart() {
+    if (_phases.isEmpty) {
+      return Container(
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(bgCardOpacity),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Center(
+          child: Text(
+            'Sem dados de periodização.',
+            style: TextStyle(color: Colors.white70),
+          ),
+        ),
+      );
+    }
+
+    // Range global
+    final globalStart = _phases
+        .map((p) => p.start)
+        .reduce((a, b) => a.isBefore(b) ? a : b);
+    final globalEnd = _phases
+        .map((p) => p.end)
+        .reduce((a, b) => a.isAfter(b) ? a : b);
+    final totalDays = math.max(1, globalEnd.difference(globalStart).inDays);
+
+    // Mapa label->índice Y
+    final labelToIndex = <String, double>{};
+    double nextIndex = 1;
+    for (final p in _phases) {
+      labelToIndex.putIfAbsent(p.label, () => nextIndex++);
+    }
+
+    final bars = <LineChartBarData>[];
+    for (final p in _phases) {
+      final y = labelToIndex[p.label]!;
+      final startX = p.start.difference(globalStart).inDays.toDouble();
+      final endX = p.end.difference(globalStart).inDays.toDouble();
+
+      final spots = <FlSpot>[];
+      for (int d = startX.toInt(); d <= endX.toInt(); d++) {
+        spots.add(FlSpot(d.toDouble(), y));
+      }
+
+      bars.add(
+        LineChartBarData(
+          spots: spots,
+          isCurved: true,
+          barWidth: 3,
+          color: p.color,
+          isStrokeCapRound: true,
+          dotData: FlDotData(show: false),
+        ),
+      );
+    }
+
+    // Bolinha no "hoje"
+    final today = DateTime.now();
+    final todayX =
+        (today.isBefore(globalStart) || today.isAfter(globalEnd))
+            ? null
+            : today.difference(globalStart).inDays.toDouble();
+
+    if (todayX != null) {
+      final y =
+          _currentPhase != null ? labelToIndex[_currentPhase!.label]! : 0.5;
+      bars.add(
+        LineChartBarData(
+          spots: [FlSpot(todayX, y)],
+          isCurved: false,
+          barWidth: 0,
+          color: Colors.transparent,
+          dotData: FlDotData(
+            show: true,
+            getDotPainter: (spot, p, bar, i) {
+              return FlDotCirclePainter(
+                radius: 5,
+                color: Colors.white,
+                strokeColor: themeBlue,
+                strokeWidth: 3,
+              );
+            },
+          ),
+        ),
+      );
+    }
+
+    // >>>>> Apenas INÍCIO e FIM no eixo X
+    final startLabel = DateFormat('dd/MM').format(globalStart);
+    final endLabel = DateFormat('dd/MM').format(globalEnd);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(bgCardOpacity),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      padding: const EdgeInsets.fromLTRB(10, 6, 10, 10),
+      child: LineChart(
+        LineChartData(
+          minX: 0,
+          maxX: totalDays.toDouble(),
+          minY: 0,
+          maxY: (labelToIndex.length + 1).toDouble(),
+          backgroundColor: Colors.transparent,
+          gridData: FlGridData(show: false),
+          borderData: FlBorderData(show: false),
+          titlesData: FlTitlesData(
+            topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                interval: 1,
+                getTitlesWidget: (value, meta) {
+                  final idx = value.toInt();
+                  final label =
+                      labelToIndex.entries
+                          .firstWhere(
+                            (e) => e.value.toInt() == idx,
+                            orElse: () => const MapEntry('', 0),
+                          )
+                          .key;
+                  if (label.isEmpty) return const SizedBox.shrink();
+                  return Text(
+                    label,
+                    style: const TextStyle(color: Colors.white70, fontSize: 10),
+                  );
+                },
+                reservedSize: 64,
+              ),
+            ),
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                interval: totalDays.toDouble(), // força só extremos
+                getTitlesWidget: (value, meta) {
+                  if (value.round() == 0) {
+                    return Text(
+                      startLabel,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 10,
+                      ),
+                    );
+                  }
+                  if (value.round() == totalDays) {
+                    return Text(
+                      endLabel,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 10,
+                      ),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+                reservedSize: 18,
+              ),
+            ),
+          ),
+          lineTouchData: LineTouchData(
+            enabled: true,
+            handleBuiltInTouches: true,
+            touchTooltipData: LineTouchTooltipData(
+              getTooltipItems:
+                  (items) =>
+                      items.map((s) {
+                        final day = globalStart.add(
+                          Duration(days: s.x.toInt()),
+                        );
+                        final phase = _phases.firstWhere(
+                          (p) => !day.isBefore(p.start) && !day.isAfter(p.end),
+                          orElse:
+                              () => _Phase(
+                                start: day,
+                                end: day,
+                                label: 'Sem fase',
+                                color: Colors.grey,
+                              ),
+                        );
+                        return LineTooltipItem(
+                          '${DateFormat('dd/MM/yyyy').format(day)}\n${phase.label}',
+                          const TextStyle(color: Colors.white),
+                        );
+                      }).toList(),
+            ),
+          ),
+          lineBarsData: bars,
+        ),
+      ),
+    );
+  }
+
+  // ---- KPIs ----
   Widget _kpiRow() {
-    Widget kpi(String label, String value) => Expanded(
+    return Row(
+      children: [
+        _kpiBox('Treinos da semana', '$_weeklyWorkouts'),
+        const SizedBox(width: 10),
+        _kpiBox('Minutos', '$_weeklyMinutes'),
+        const SizedBox(width: 10),
+        _periodizationKpiBox(), // <<< retângulo Periodização com datas
+        const SizedBox(width: 10),
+        _kpiBox('Streak', '$_streak'),
+      ],
+    );
+  }
+
+  Widget _kpiBox(String label, String value) => Expanded(
+    child: Container(
+      height: 100,
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(bgCardOpacity),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 12,
+              height: 1.2,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  // Caixa específica de Periodização com intervalo (dd/MM – dd/MM)
+  Widget _periodizationKpiBox() {
+    final name = _currentPhase?.label ?? '—';
+    final d1 =
+        _currentPhase != null
+            ? DateFormat('dd/MM').format(_currentPhase!.start)
+            : '—';
+    final d2 =
+        _currentPhase != null
+            ? DateFormat('dd/MM').format(_currentPhase!.end)
+            : '—';
+
+    return Expanded(
       child: Container(
-        height: 100, // altura fixa evita overflow/medidas infinitas
+        height: 100,
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.06),
+          color: Colors.white.withOpacity(bgCardOpacity),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center, // centra vertical
-          crossAxisAlignment: CrossAxisAlignment.center, // centra horizontal
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // evita overflow com números grandes
             FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(
-                value,
+                name,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   color: Colors.white,
@@ -515,35 +1010,27 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
             const SizedBox(height: 6),
             Text(
-              label,
+              '$d1 – $d2',
               textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 color: Colors.white70,
-                fontSize: 12,
+                fontSize: 8,
                 height: 1.2,
+              ),
+            ),
+            const SizedBox(height: 2),
+            const Text(
+              'Periodização',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white54,
+                fontSize: 10,
+                height: 1.1,
               ),
             ),
           ],
         ),
       ),
-    );
-
-    return Row(
-      // <<< IMPORTANTE: não usar CrossAxisAlignment.stretch aqui!
-      children: [
-        kpi('Treinos da semana', '$_weeklyWorkouts'),
-        const SizedBox(width: 10),
-        kpi('Minutos', '$_weeklyMinutes'),
-        const SizedBox(width: 10),
-        kpi(
-          'Variação do Peso',
-          '${_weeklyWeightDelta >= 0 ? '+' : ''}${_weeklyWeightDelta.toStringAsFixed(1)} kg',
-        ),
-        const SizedBox(width: 10),
-        kpi('Streak', '$_streak'),
-      ],
     );
   }
 
@@ -556,7 +1043,7 @@ class _DashboardPageState extends State<DashboardPage> {
       return Expanded(
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF6EC1E4),
+            backgroundColor: themeBlue,
             padding: const EdgeInsets.symmetric(vertical: 14),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
@@ -579,13 +1066,13 @@ class _DashboardPageState extends State<DashboardPage> {
         bigBtn(
           icon: Icons.timer,
           label: 'Iniciar treino',
-          onTap:
-              _openCronometer, // <- usa o handler que atualiza KPIs ao voltar
+          onTap: _openCronometer,
         ),
       ],
     );
   }
 
+  // ---- Metas do dia ----
   Widget _dailyGoalsChips() {
     final user = _user;
     if (user == null) return const SizedBox.shrink();
@@ -621,12 +1108,10 @@ class _DashboardPageState extends State<DashboardPage> {
                   style: const TextStyle(color: Colors.white),
                 ),
                 selected: v == true,
-                backgroundColor: Colors.white.withOpacity(0.06),
-                selectedColor: const Color(0xFF6EC1E4).withOpacity(0.3),
+                backgroundColor: Colors.white.withOpacity(bgCardOpacity),
+                selectedColor: themeBlue.withOpacity(0.3),
                 onSelected: (sel) async {
                   await docRef.set({...goals, k: sel}, SetOptions(merge: true));
-                  // Marcar atividade de hoje se quiseres que metas contem para streak:
-                  // setState(() { _activityDays.add(_startOfDay(DateTime.now())); _streak = _calcStreak(_activityDays.toList()); });
                 },
                 checkmarkColor: Colors.white,
               ),
@@ -636,13 +1121,7 @@ class _DashboardPageState extends State<DashboardPage> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Metas do dia',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            _sectionTitle('Metas do dia'),
             const SizedBox(height: 8),
             Wrap(children: chips),
           ],
@@ -664,6 +1143,7 @@ class _DashboardPageState extends State<DashboardPage> {
     }
   }
 
+  // ---- Hidratação ----
   Widget _hydrationCounter() {
     final user = _user;
     if (user == null) return const SizedBox.shrink();
@@ -685,7 +1165,7 @@ class _DashboardPageState extends State<DashboardPage> {
         return Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.06),
+            color: Colors.white.withOpacity(bgCardOpacity),
             borderRadius: BorderRadius.circular(16),
           ),
           child: Row(
@@ -722,119 +1202,20 @@ class _DashboardPageState extends State<DashboardPage> {
       },
     );
   }
+}
 
-  Widget _insightOfTheDay() {
-    String msg = 'Mantém a consistência 👍';
-    if (_weightProgress.length >= 3) {
-      final last3 =
-          _weightProgress
-              .sublist(_weightProgress.length - 3)
-              .map((e) => e['weight'] as double)
-              .toList();
-      if (last3[2] > last3[1] && last3[1] > last3[0]) {
-        msg = 'Peso a subir nos últimos dias. Reforça hidratação e sono.';
-      } else if (last3[2] < last3[1] && last3[1] < last3[0]) {
-        msg = 'Boa! Tendência de descida consistente 👏';
-      }
-    }
-    return _smallInfoCard('Insight do dia', msg);
-  }
+// ======================= MODELOS AUXILIARES =======================
 
-  Widget _nextSessionCard() {
-    final user = _user;
-    if (user == null) return const SizedBox.shrink();
+class _Phase {
+  final DateTime start;
+  final DateTime end;
+  final String label;
+  final Color color;
 
-    final now = DateTime.now();
-    final q =
-        FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .collection('assigned_workouts')
-            .where('date', isGreaterThan: Timestamp.fromDate(now))
-            .orderBy('date', descending: false)
-            .limit(1)
-            .snapshots();
-
-    return StreamBuilder<QuerySnapshot>(
-      stream: q,
-      builder: (ctx, snap) {
-        if (!snap.hasData || snap.data!.docs.isEmpty) {
-          return _smallInfoCard('Próxima sessão', 'Sem sessões futuras.');
-        }
-        final d = snap.data!.docs.first.data() as Map<String, dynamic>;
-        final dt = (d['date'] as Timestamp).toDate();
-        final when = DateFormat('EEE, dd MMM HH:mm', 'pt_PT').format(dt);
-        return _smallInfoCard(
-          'Próxima sessão',
-          '${d['title'] ?? 'Treino'} • $when',
-        );
-      },
-    );
-  }
-
-  // ---------- Helpers visuais ----------
-  Widget _smallInfoCard(String title, String subtitle) => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(
-      color: Colors.white.withOpacity(0.06),
-      borderRadius: BorderRadius.circular(16),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(subtitle, style: const TextStyle(color: Colors.white70)),
-      ],
-    ),
-  );
-
-  Widget _actionCard({
-    required String title,
-    required String subtitle,
-    required String cta,
-    required VoidCallback onTap,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(subtitle, style: const TextStyle(color: Colors.white70)),
-              ],
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF6EC1E4),
-            ),
-            onPressed: onTap,
-            child: Text(cta),
-          ),
-        ],
-      ),
-    );
-  }
+  _Phase({
+    required this.start,
+    required this.end,
+    required this.label,
+    required this.color,
+  });
 }

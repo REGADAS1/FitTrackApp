@@ -8,6 +8,8 @@ import 'exercise_list.dart';
 import 'assign_workout.dart';
 import 'view_workouts.dart';
 import 'pt_assessments_page.dart';
+import 'calendar.dart';
+import 'periodization_page.dart';
 
 class PTDashboardPage extends StatefulWidget {
   const PTDashboardPage({super.key});
@@ -355,40 +357,79 @@ class _PTDashboardPageState extends State<PTDashboardPage> {
 
                             const SizedBox(height: 12),
 
-                            // 2ª linha: Avaliações (alinhado à esquerda)
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: ElevatedButton.icon(
-                                onPressed: () {
-                                  final id = _selectedUser!['id'] as String;
-                                  final name =
-                                      '${_selectedUser!['firstName']} ${_selectedUser!['lastName']}';
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder:
-                                          (_) => PTAssessmentsPage(
-                                            userId: id,
-                                            userName: name,
-                                          ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: [
+                                // Avaliações
+                                ElevatedButton.icon(
+                                  onPressed: () {
+                                    final id = _selectedUser!['id'] as String;
+                                    final name =
+                                        '${_selectedUser!['firstName']} ${_selectedUser!['lastName']}';
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (_) => PTAssessmentsPage(
+                                              userId: id,
+                                              userName: name,
+                                            ),
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.assignment),
+                                  label: const Text('Avaliações'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF6EC1E4),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 12,
                                     ),
-                                  );
-                                },
-                                icon: const Icon(Icons.assignment),
-                                label: const Text('Avaliações'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF6EC1E4),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 20,
-                                    vertical: 12,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
                                   ),
                                 ),
-                              ),
+
+                                const SizedBox(width: 12),
+
+                                // Periodização
+                                ElevatedButton.icon(
+                                  onPressed: () {
+                                    final id = _selectedUser!['id'] as String;
+                                    final name =
+                                        '${_selectedUser!['firstName']} ${_selectedUser!['lastName']}'; // <-- aqui estava a faltar
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (_) => PeriodizationPage(
+                                              userId: id,
+                                              userName: name,
+                                            ),
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.auto_graph_rounded),
+                                  label: const Text('Periodização'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(
+                                      0xFFE91E63,
+                                    ), // cor bonita para diferenciar
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
+
                             // ---------- /AÇÕES ----------
                           ],
                         ),
