@@ -8,4 +8,6 @@ class AppImages {
   static const String signupOrsigninBG = '${basePath}signup_or_signin_page.png';
   static const String nvrtap_white =
       '${basePath}splash_page_logo_white_nvrtap.png';
+  static const String loginBG = '${basePath}login_fundo.png';
+  static const String signupBG = '${basePath}signup_fundo.png';
 }

@@ -34,7 +34,7 @@ class ChooseModePage extends StatelessWidget {
                 children: [
                   // Logo PNG (em vez de SVG)
                   Image.asset(
-                    'assets/images/nvrtap_white.png',
+                    'assets/images/adpro_white.png',
                     height: 220,
                     alignment: Alignment.topCenter,
                   ),

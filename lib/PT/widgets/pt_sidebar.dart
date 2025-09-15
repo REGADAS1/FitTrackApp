@@ -26,7 +26,7 @@ class PTSidebar extends StatelessWidget {
               child: SizedBox(
                 height: 120,
                 child: Image.asset(
-                  'assets/images/nvrtap_white.png',
+                  'assets/images/adpro_white.png',
                   fit: BoxFit.contain,
                 ),
               ),

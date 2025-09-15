@@ -22,7 +22,7 @@ class _SplashPageState extends State<SplashPage> {
       backgroundColor: const Color(0xFF1A1A1A),
       body: Center(
         child: Image.asset(
-          'assets/images/nvrtap_white.png',
+          'assets/images/adpro_white.png',
           width: 220, // Tamanho ajustável
         ),
       ),

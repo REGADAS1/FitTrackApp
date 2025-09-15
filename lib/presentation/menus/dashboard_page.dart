@@ -465,7 +465,7 @@ class _DashboardPageState extends State<DashboardPage> {
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 22,
+              fontSize: 19,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -1014,20 +1014,11 @@ class _DashboardPageState extends State<DashboardPage> {
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: Colors.white70,
-                fontSize: 8,
+                fontSize: 10,
                 height: 1.2,
               ),
             ),
             const SizedBox(height: 2),
-            const Text(
-              'Periodização',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white54,
-                fontSize: 10,
-                height: 1.1,
-              ),
-            ),
           ],
         ),
       ),

@@ -89,7 +89,7 @@ class _PTLoginPageState extends State<PTLoginPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Image.asset('assets/images/nvrtap_white.png', height: 200),
+              Image.asset('assets/images/adpro_white.png', height: 200),
               const SizedBox(height: 32),
               Container(
                 padding: const EdgeInsets.all(32),

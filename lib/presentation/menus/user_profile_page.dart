@@ -83,7 +83,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
         }
       }
     } catch (_) {
-      // Ignora se a coleção/campos não existirem
+      // Silenciar se coleção/campos não existirem
     }
   }
 
@@ -95,6 +95,124 @@ class _UserProfilePageState extends State<UserProfilePage> {
         MaterialPageRoute(builder: (_) => const SignUpOrSignInPage()),
       );
     }
+  }
+
+  Future<void> _confirmLogout() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: false,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (ctx) {
+        return Container(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.55),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+          ),
+          child: _glassCard(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const Text(
+                  'Terminar sessão?',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Vais sair da tua conta. Podes voltar a entrar quando quiseres.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white70),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    // NÃO — estilo "Pesar-me" (outline branco)
+                    Expanded(
+                      child: SizedBox(
+                        height: 48,
+                        child: OutlinedButton.icon(
+                          onPressed: () => Navigator.pop(ctx),
+                          icon: const Icon(Icons.close, color: Colors.white),
+                          label: const Text(
+                            'Não',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(
+                              color: Colors.white,
+                              width: 1.5,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            backgroundColor: Colors.transparent,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // SIM — estilo "Terminar sessão" (outline vermelho)
+                    Expanded(
+                      child: SizedBox(
+                        height: 48,
+                        child: OutlinedButton.icon(
+                          onPressed: () async {
+                            Navigator.pop(ctx);
+                            await _logout();
+                          },
+                          icon: const Icon(
+                            Icons.logout,
+                            color: Colors.redAccent,
+                          ),
+                          label: const Text(
+                            'Sim',
+                            style: TextStyle(
+                              color: Colors.redAccent,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(
+                              color: Colors.redAccent,
+                              width: 1.5,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            backgroundColor: Colors.transparent,
+                            foregroundColor: Colors.redAccent,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   void _editProfile() {
@@ -163,7 +281,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
                             const SizedBox(height: 8),
                             _metricsGrid(),
                             const SizedBox(height: 24),
-                            // (removido o título "Ações")
                             _actionsCard(),
                           ],
                         ),
@@ -261,7 +378,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                // Botão Editar Perfil — OUTLINE branco
                 SizedBox(
                   height: 40,
                   child: OutlinedButton.icon(
@@ -290,9 +406,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
     );
   }
 
-  /// Grade de métricas (2 linhas):
-  /// 1ª linha: Peso | Altura
-  /// 2ª linha: IMC  | Última avaliação (com valor menor)
+  /// Grade de métricas
   Widget _metricsGrid() {
     final bmi =
         (weight != null && height != null && height! > 0)
@@ -342,7 +456,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                 title: 'Última avaliação',
                 value: lastAssessmentStr,
                 icon: Icons.event_available_outlined,
-                valueTextSize: 14, // <<< texto menor para data/hora
+                valueTextSize: 14,
               ),
             ),
           ],
@@ -355,7 +469,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
     required String title,
     required String value,
     required IconData icon,
-    double valueTextSize = 18, // padrão
+    double valueTextSize = 18,
   }) {
     return _glassCard(
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
@@ -379,7 +493,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                   value,
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: valueTextSize, // aplica tamanho customizável
+                    fontSize: valueTextSize,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -426,12 +540,12 @@ class _UserProfilePageState extends State<UserProfilePage> {
             ),
           ),
           const SizedBox(height: 12),
-          // Terminar sessão — OUTLINE vermelho
+          // Terminar sessão — abre confirmação
           SizedBox(
             width: double.infinity,
             height: 50,
             child: OutlinedButton.icon(
-              onPressed: _logout,
+              onPressed: _confirmLogout,
               icon: const Icon(Icons.logout, color: Colors.redAccent),
               label: const Text(
                 'Terminar sessão',

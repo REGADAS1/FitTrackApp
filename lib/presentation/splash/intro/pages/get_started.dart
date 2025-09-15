@@ -1,4 +1,5 @@
 import 'package:fit_track_app/data/core/configs/theme/assets/app_images.dart';
+import 'package:fit_track_app/presentation/auth/pages/signup_or_signin.dart';
 import 'package:fit_track_app/presentation/splash/choose_mode/pages/choose_mode.dart';
 import 'package:flutter/material.dart';
 
@@ -30,7 +31,7 @@ class GetStartedPage extends StatelessWidget {
                   // Logo PNG (imagem centralizada)
                   Center(
                     child: Image.asset(
-                      'assets/images/nvrtap_white.png',
+                      'assets/images/adpro_white.png',
                       height: 240,
                     ),
                   ),
@@ -56,7 +57,8 @@ class GetStartedPage extends StatelessWidget {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => const ChooseModePage(),
+                                builder:
+                                    (context) => const SignUpOrSignInPage(),
                               ),
                             );
                           },

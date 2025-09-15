@@ -24,8 +24,8 @@ class SignupPage extends StatelessWidget {
       borderSide: BorderSide.none,
     );
 
-    final hintStyle = TextStyle(
-      color: const Color.fromARGB(255, 180, 180, 180),
+    final hintStyle = const TextStyle(
+      color: Color.fromARGB(255, 120, 120, 120),
     );
 
     return Scaffold(
@@ -35,7 +35,7 @@ class SignupPage extends StatelessWidget {
           Container(
             decoration: BoxDecoration(
               image: DecorationImage(
-                image: AssetImage(AppImages.signupOrsigninBG),
+                image: AssetImage(AppImages.signupBG),
                 fit: BoxFit.cover,
               ),
             ),
@@ -80,7 +80,7 @@ class SignupPage extends StatelessWidget {
                   child: Column(
                     children: [
                       // Logo
-                      SvgPicture.asset(AppVectors.logo_white, height: 250),
+                      Image.asset('assets/images/adpro_white.png', height: 200),
                       const SizedBox(height: 0),
 
                       // Primeira linha: nome e apelido
@@ -91,6 +91,8 @@ class SignupPage extends StatelessWidget {
                               margin: const EdgeInsets.only(right: 8),
                               child: TextFormField(
                                 controller: _Name,
+                                style: const TextStyle(color: Colors.black),
+                                cursorColor: Colors.black,
                                 decoration: InputDecoration(
                                   filled: true,
                                   fillColor: Colors.white,
@@ -110,6 +112,8 @@ class SignupPage extends StatelessWidget {
                               margin: const EdgeInsets.only(left: 8),
                               child: TextFormField(
                                 controller: _Lastname,
+                                style: const TextStyle(color: Colors.black),
+                                cursorColor: Colors.black,
                                 decoration: InputDecoration(
                                   filled: true,
                                   fillColor: Colors.white,
@@ -131,10 +135,13 @@ class SignupPage extends StatelessWidget {
                       // Email
                       TextFormField(
                         controller: _Email,
+                        keyboardType: TextInputType.emailAddress,
+                        style: const TextStyle(color: Colors.black),
+                        cursorColor: Colors.black,
                         decoration: InputDecoration(
                           filled: true,
                           fillColor: Colors.white,
-                          hintText: 'Email',
+                          hintText: 'Email', // placeholder que não sobe
                           hintStyle: hintStyle,
                           border: inputBorder,
                           contentPadding: const EdgeInsets.symmetric(
@@ -149,6 +156,8 @@ class SignupPage extends StatelessWidget {
                       TextFormField(
                         controller: _Password,
                         obscureText: true,
+                        style: const TextStyle(color: Colors.black),
+                        cursorColor: Colors.black,
                         decoration: InputDecoration(
                           filled: true,
                           fillColor: Colors.white,
@@ -167,6 +176,8 @@ class SignupPage extends StatelessWidget {
                       TextFormField(
                         controller: _ConfirmPassword,
                         obscureText: true,
+                        style: const TextStyle(color: Colors.black),
+                        cursorColor: Colors.black,
                         decoration: InputDecoration(
                           filled: true,
                           fillColor: Colors.white,
@@ -226,22 +237,31 @@ class SignupPage extends StatelessWidget {
                               (r) {
                                 // Sucesso (right)
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: const Text(
+                                  const SnackBar(
+                                    content: Text(
                                       'Conta criada com sucesso!',
+                                      style: TextStyle(
+                                        color: Colors.black,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
-                                    backgroundColor: Colors.grey[800],
+                                    backgroundColor: Colors.white,
+                                    behavior: SnackBarBehavior.floating,
+                                    duration: Duration(milliseconds: 1300),
                                   ),
                                 );
 
-                                // Redirecionar após 2 segundos
-                                Future.delayed(const Duration(seconds: 1), () {
-                                  Navigator.of(context).pushReplacement(
-                                    MaterialPageRoute(
-                                      builder: (_) => LoginPage(),
-                                    ),
-                                  );
-                                });
+                                // Redirecionar após ~1s
+                                Future.delayed(
+                                  const Duration(milliseconds: 1400),
+                                  () {
+                                    Navigator.of(context).pushReplacement(
+                                      MaterialPageRoute(
+                                        builder: (_) => LoginPage(),
+                                      ),
+                                    );
+                                  },
+                                );
                               },
                             );
                           },

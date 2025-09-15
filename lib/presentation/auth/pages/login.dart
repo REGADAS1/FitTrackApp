@@ -9,8 +9,8 @@ import 'package:fit_track_app/data/core/configs/theme/assets/app_images.dart';
 class LoginPage extends StatelessWidget {
   LoginPage({super.key});
 
-  final TextEditingController _Email = TextEditingController();
-  final TextEditingController _Password = TextEditingController();
+  final TextEditingController _email = TextEditingController();
+  final TextEditingController _password = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +20,7 @@ class LoginPage extends StatelessWidget {
     );
 
     final hintStyle = const TextStyle(
-      color: Color.fromARGB(255, 180, 180, 180),
+      color: Color.fromARGB(255, 120, 120, 120),
     );
 
     return Scaffold(
@@ -74,20 +74,20 @@ class LoginPage extends StatelessWidget {
                   ),
                   child: Column(
                     children: [
-                      // Logo PNG
-                      Image.asset(
-                        'assets/images/nvrtap_white.png',
-                        height: 160,
-                      ),
-                      const SizedBox(height: 0),
+                      // Logo
+                      Image.asset('assets/images/adpro_white.png', height: 160),
+                      const SizedBox(height: 24),
 
                       // Email
                       TextFormField(
-                        controller: _Email,
+                        controller: _email,
+                        style: const TextStyle(color: Colors.black),
+                        cursorColor: Colors.black,
                         decoration: InputDecoration(
                           filled: true,
                           fillColor: Colors.white,
-                          hintText: 'Email',
+                          hintText:
+                              'Email', // 👈 não sobe, desaparece quando escreves
                           hintStyle: hintStyle,
                           border: inputBorder,
                           contentPadding: const EdgeInsets.symmetric(
@@ -100,12 +100,14 @@ class LoginPage extends StatelessWidget {
 
                       // Palavra-passe
                       TextFormField(
-                        controller: _Password,
+                        controller: _password,
                         obscureText: true,
+                        style: const TextStyle(color: Colors.black),
+                        cursorColor: Colors.black,
                         decoration: InputDecoration(
                           filled: true,
                           fillColor: Colors.white,
-                          hintText: 'Palavra-passe',
+                          hintText: 'Palavra-passe', // 👈 não sobe
                           hintStyle: hintStyle,
                           border: inputBorder,
                           contentPadding: const EdgeInsets.symmetric(
@@ -121,8 +123,8 @@ class LoginPage extends StatelessWidget {
                         width: double.infinity,
                         child: ElevatedButton(
                           onPressed: () async {
-                            final email = _Email.text.trim();
-                            final password = _Password.text;
+                            final email = _email.text.trim();
+                            final password = _password.text;
 
                             try {
                               await FirebaseAuth.instance
@@ -132,12 +134,17 @@ class LoginPage extends StatelessWidget {
                                   );
 
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: const Text(
+                                const SnackBar(
+                                  content: Text(
                                     'Login efetuado com sucesso!',
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
-                                  backgroundColor: Colors.grey[800],
-                                  duration: const Duration(milliseconds: 1300),
+                                  backgroundColor: Colors.white,
+                                  duration: Duration(milliseconds: 1300),
+                                  behavior: SnackBarBehavior.floating,
                                 ),
                               );
 
@@ -208,7 +215,25 @@ class LoginPage extends StatelessWidget {
                           GestureDetector(
                             onTap: () {
                               Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => SignupPage()),
+                                PageRouteBuilder(
+                                  pageBuilder:
+                                      (
+                                        context,
+                                        animation,
+                                        secondaryAnimation,
+                                      ) => SignupPage(),
+                                  transitionsBuilder: (
+                                    context,
+                                    animation,
+                                    secondaryAnimation,
+                                    child,
+                                  ) {
+                                    return FadeTransition(
+                                      opacity: animation,
+                                      child: child,
+                                    );
+                                  },
+                                ),
                               );
                             },
                             child: const Text(

@@ -17,7 +17,7 @@ class SignUpOrSignInPage extends StatelessWidget {
             decoration: BoxDecoration(
               image: DecorationImage(
                 fit: BoxFit.cover,
-                image: AssetImage(AppImages.signupOrsigninBG),
+                image: AssetImage(AppImages.loginBG),
               ),
             ),
           ),
@@ -32,7 +32,7 @@ class SignUpOrSignInPage extends StatelessWidget {
                   const SizedBox(height: 100),
 
                   // LOGO em PNG
-                  Image.asset('assets/images/nvrtap_white.png', height: 200),
+                  Image.asset('assets/images/adpro_white.png', height: 200),
 
                   const SizedBox(height: 50),
                   const Text(

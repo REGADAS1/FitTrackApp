@@ -1,1 +1,17 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"fittrackapp-76fe2","appId":"1:82765283728:android:56ee0d6fd333df06ae7315","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"fittrackapp-76fe2","configurations":{"android":"1:82765283728:android:56ee0d6fd333df06ae7315","ios":"1:82765283728:ios:eba275c3459adbf9ae7315","macos":"1:82765283728:ios:eba275c3459adbf9ae7315","web":"1:82765283728:web:83d62a9ba606b01dae7315","windows":"1:82765283728:web:79f0dc156c69895cae7315"}}}}}}
+{
+  "hosting": [
+    {
+      "target": "adpro",
+      "public": "build/web",
+      "ignore": ["firebase.json","**/.*","**/node_modules/**"],
+      "rewrites": [{ "source": "**", "destination": "/index.html" }]
+    },
+    {
+      "target": "default",
+      "public": "build/web_default",
+      "ignore": ["firebase.json","**/.*","**/node_modules/**"],
+      "rewrites": [{ "source": "**", "destination": "/index.html" }]
+    }
+  ]
+}
+
