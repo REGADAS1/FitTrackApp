@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:fit_track_app/presentation/splash/pages/splash.dart';
 
 class UserProfilePage extends StatefulWidget {
   const UserProfilePage({super.key});
@@ -89,12 +90,14 @@ class _UserProfilePageState extends State<UserProfilePage> {
 
   Future<void> _logout() async {
     await FirebaseAuth.instance.signOut();
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const SignUpOrSignInPage()),
-      );
-    }
+    if (!mounted) return;
+
+    // Mostra a SplashPage por ~3s e DEPOIS navega sozinha para GetStartedPage.
+    // Limpamos toda a pilha para reiniciar o fluxo normal.
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const SplashPage(autoNavigate: true)),
+      (route) => false,
+    );
   }
 
   Future<void> _confirmLogout() async {

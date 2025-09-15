@@ -1,9 +1,15 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import 'package:fit_track_app/data/core/configs/theme/app_theme.dart';
 import 'package:fit_track_app/firebase_options.dart';
 import 'package:fit_track_app/presentation/splash/choose_mode/pages/bloc/theme_cubit.dart';
 import 'package:fit_track_app/presentation/splash/pages/splash.dart';
+import 'package:fit_track_app/presentation/splash/intro/pages/get_started.dart';
+import 'package:fit_track_app/presentation/auth/pages/check_profile.dart';
 import 'package:fit_track_app/service_locator.dart';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -15,6 +21,8 @@ import 'package:path_provider/path_provider.dart';
 // (Opcional) Se vieres a usar componentes Syncfusion e quiseres PT:
 // import 'package:syncfusion_localizations/syncfusion_localizations.dart';
 // import 'package:syncfusion_flutter_core/core.dart';
+
+const String kKeepSignedInKey = 'keep_signed_in';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -69,10 +77,60 @@ class MyApp extends StatelessWidget {
               // SfGlobalLocalizations.delegate,
             ],
 
-            home: const SplashPage(),
+            // Mostra Splash 3s e depois decide para onde ir (CheckProfile vs GetStarted)
+            home: const _AuthGateWithSplash(),
           );
         },
       ),
+    );
+  }
+}
+
+/// Mostra o Splash durante ~3s e decide o arranque:
+/// - Se há user E keepSignedIn=true → CheckProfilePage
+/// - Caso contrário → GetStartedPage
+class _AuthGateWithSplash extends StatelessWidget {
+  const _AuthGateWithSplash({super.key});
+
+  Future<Widget> _decideStart() async {
+    // 1) garantir 3s de Splash
+    final splashDelay = Future.delayed(const Duration(seconds: 3));
+
+    // 2) obter o primeiro estado de auth
+    final initialUser = await FirebaseAuth.instance.authStateChanges().first;
+
+    // 3) ler preferência "manter sessão iniciada"
+    final prefs = await SharedPreferences.getInstance();
+    final keep = prefs.getBool(kKeepSignedInKey) ?? true;
+
+    // aguardar o fim do splash
+    await splashDelay;
+
+    // Mobile: se havia sessão mas keep=false, força logout para seguir fluxo normal
+    if (initialUser != null && !keep && !kIsWeb) {
+      await FirebaseAuth.instance.signOut();
+      return GetStartedPage();
+    }
+
+    // Web: com keep=false normalmente a sessão já não persiste (Persistence.SESSION)
+    if (initialUser != null && keep) {
+      return CheckProfilePage();
+    } else {
+      return GetStartedPage();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Widget>(
+      future: _decideStart(),
+      builder: (context, snap) {
+        if (snap.connectionState != ConnectionState.done) {
+          // Splash PASSIVO (não navega sozinho no arranque)
+          return const SplashPage(autoNavigate: false);
+        }
+        return snap.data ?? GetStartedPage();
+      },
     );
   }
 }
