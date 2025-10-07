@@ -1,6 +1,10 @@
 # Compiled JavaScript files
 lib/**/*.js
 lib/**/*.js.map
+*.apk
+*.aar
+*.ap_
+*.aab
 
 # TypeScript v1 declaration files
 typings/

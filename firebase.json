@@ -11,6 +11,21 @@
       "public": "build/web_default",
       "ignore": ["firebase.json","**/.*","**/node_modules/**"],
       "rewrites": [{ "source": "**", "destination": "/index.html" }]
+    },
+    {
+      "target": "students",                   
+      "public": "students_web",
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "headers": [
+        {
+          "source": "/downloads/**",
+          "headers": [
+            { "key": "Content-Type", "value": "application/vnd.android.package-archive" },
+            { "key": "Cache-Control", "value": "public, max-age=60" },
+            { "key": "Content-Disposition", "value": "attachment" }
+          ]
+        }
+      ]
     }
   ]
 }

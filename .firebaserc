@@ -8,6 +8,9 @@
         ],
         "default": [
           "fittrackapp-76fe2"
+        ],
+        "students": [
+          "adpro-students"
         ]
       }
     }

@@ -60,7 +60,7 @@ class MyApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,
-            themeMode: mode,
+            themeMode: ThemeMode.dark,
 
             // Locale por defeito PT-PT
             locale: const Locale('pt', 'PT'),

@@ -4,6 +4,7 @@ import 'package:fit_track_app/PT/pages/calendar.dart';
 import 'package:fit_track_app/PT/pages/exercise_list.dart';
 import 'package:fit_track_app/PT/pages/pt_chat_page.dart';
 import 'package:fit_track_app/PT/pages/pt_dashboard.dart';
+import 'package:fit_track_app/PT/pages/pt_profile_page.dart';
 import 'package:fit_track_app/PT/pages/pt_feed_page.dart'; // <-- import do FeedPage
 import 'package:flutter/material.dart';
 import 'package:fit_track_app/data/core/configs/theme/assets/app_images.dart';
@@ -72,6 +73,14 @@ class PTSidebar extends StatelessWidget {
             label: 'Chat',
             route: '/chat',
             destination: const PTChatPage(),
+          ),
+
+          _buildMenuItem(
+            context,
+            icon: Icons.chat,
+            label: 'Perfil',
+            route: '/perfil',
+            destination: const PTProfilePage(),
           ),
 
           const Spacer(),

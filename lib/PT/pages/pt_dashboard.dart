@@ -327,8 +327,9 @@ class _PTDashboardPageState extends State<PTDashboardPage> {
                                       MaterialPageRoute(
                                         builder:
                                             (_) => ViewWorkoutsPage(
-                                              userEmail:
-                                                  _selectedUser!['email'],
+                                              userId:
+                                                  _selectedUser!['id']
+                                                      as String,
                                               userName:
                                                   '${_selectedUser!['firstName']} ${_selectedUser!['lastName']}',
                                             ),

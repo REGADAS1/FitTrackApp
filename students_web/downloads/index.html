@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Descarregar AdProfit</title>
+  <meta name="description" content="Descarrega a app AdProfit para Android.">
+  <link rel="icon" type="image/png" href="favicon.png" />
+  <style>
+    :root { --bg:#0f1115; --card:#151823; --stroke:#24283b; --txt:#f5f7fb; --muted:#aab1c5; --brand:#63b3ed; }
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial,sans-serif}
+    .wrap{max-width:860px;margin:0 auto;padding:48px 20px}
+    .card{background:var(--card);border:1px solid var(--stroke);border-radius:16px;padding:28px}
+    h1{margin:0 0 12px;font-size:28px;letter-spacing:.2px}
+    p{margin:0 0 14px;line-height:1.6;color:var(--txt)}
+    .muted{color:var(--muted);font-size:14px}
+    .btn{display:inline-block;margin-top:16px;padding:14px 18px;background:var(--brand);color:#0b1017;text-decoration:none;border-radius:12px;font-weight:700}
+    .grid{display:grid;gap:18px}
+    .note{background:#10131b;border:1px dashed var(--stroke);border-radius:12px;padding:14px;color:var(--muted);font-size:14px}
+    footer{opacity:.7;margin-top:24px;font-size:13px}
+    @media (max-width:480px){h1{font-size:24px}}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="card grid">
+      <header>
+        <h1>Descarregar AdProfit (Android)</h1>
+        <p>Versão <strong id="ver">1.0.0</strong> • Tamanho pode demorar alguns segundos a iniciar.</p>
+      </header>
+
+      <a class="btn" href="https://github.com/<user>/<repo>/releases/download/v1.0.0/adprofit-1.0.0.apk">
+  Descarregar APK
+</a>
+
+
+      <div class="note">
+        <strong>Dica:</strong> caso seja a primeira instalação fora da Play Store, ativa “Permitir apps de fontes desconhecidas”.
+      </div>
+
+      <section class="muted">
+        <p>Se estiveres em iPhone/iPad, não é possível instalar APK. Usa um dispositivo Android.</p>
+      </section>
+    </div>
+    <footer>© <span id="year"></span> AdProfit</footer>
+  </main>
+
+  <script>
+    // Atualiza ano do rodapé
+    document.getElementById('year').textContent = new Date().getFullYear();
+    // (Opcional) Se mantiveres um ficheiro de versão, podes preencher dinamicamente o <span id="ver">
+    // document.getElementById('ver').textContent = '1.0.1';
+  </script>
+</body>
+</html>
